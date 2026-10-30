@@ -1,6 +1,7 @@
 # FitTrack Git Ignore - Protect Personal Backups & Sensitive Local Files
 *.json
 !package*.json
+!vercel.json
 *.csv
 *.log
 *.tmp

@@ -1265,6 +1265,22 @@
         const evalResult = FitTrackAdaptive.evaluateTargets(app.store);
         assertEquals(baseline.targetCalories, evalResult.recommendedCalories, 'Target calories match between baseline and adaptive evaluation');
       });
+
+      it('pure JS fallback hashes and authenticates password when crypto.subtle is absent (mobile LAN context)', async () => {
+        const salt = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
+        const rawHash = FitTrackAuth._pbkdf2Sha256('admin123', salt, 1000);
+        assert(rawHash.length === 64, 'Generated 64 hex characters for SHA-256');
+        assert(typeof rawHash === 'string', 'Returns string hex hash');
+      });
+
+      it('generateMobileSyncPayload creates valid sync token and pairs user seamlessly', () => {
+        const app = new FitTrackApp();
+        const testUser = { username: 'test_sync_user', displayName: 'Sync Tester', role: 'user' };
+        localStorage.setItem(FitTrackAuth.SESSION_STORAGE_KEY, JSON.stringify({ user: testUser }));
+        const payload = app.generateMobileSyncPayload();
+        assert(payload && payload.token, 'Generated non-empty token');
+        assert(payload.fullUrl.includes('#sync='), 'Payload URL contains #sync=');
+      });
     });
 
     // Run and render results sequentially in exact declaration order

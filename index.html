@@ -74,6 +74,9 @@
         </a>
       </nav>
       <div class="mobile-drawer-footer">
+        <button type="button" class="btn btn-outline btn-sm w-full mb-2 btn-pair-device" id="btn-drawer-pair">
+          📱 Sync Devices / QR
+        </button>
         <button type="button" class="btn btn-danger btn-sm w-full mb-2 btn-do-logout" id="btn-drawer-logout">
           🚪 Log Out
         </button>
@@ -155,6 +158,9 @@
       </nav>
 
       <div class="sidebar-footer">
+        <button type="button" class="btn btn-outline btn-sm w-full mb-2 btn-pair-device" id="btn-sidebar-pair">
+          📱 Pair Mobile / Sync
+        </button>
         <button type="button" class="btn btn-outline btn-sm w-full mb-2 btn-do-logout" id="btn-sidebar-logout">
           🚪 Log Out
         </button>
@@ -1357,6 +1363,9 @@
                 <button type="submit" class="btn btn-primary w-full" id="btn-submit-login">
                   <span id="login-btn-text">🔐 Sign In to Dashboard</span>
                 </button>
+                <button type="button" class="btn btn-outline btn-sm w-full mt-2 btn-pair-device" id="btn-login-pair">
+                  📱 Pair with Mobile / Scan QR Code
+                </button>
               </div>
             </form>
 
@@ -1884,6 +1893,62 @@
         <button type="button" class="btn btn-primary" id="btn-apply-adaptive-targets">
           ⚡ Apply Recommended Targets Now
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Device Pairing & Mobile Sync Modal -->
+  <div class="modal-overlay" id="modal-device-sync">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog modal-dialog-md" style="max-height: 90vh; display: flex; flex-direction: column;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-subtle); padding: 1.1rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 class="modal-title" style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem; color: var(--color-text-main);">
+            <span>📱</span> Mobile & Multi-Device Sync
+          </h3>
+          <p class="modal-subtitle" style="margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--color-text-muted);">
+            Seamlessly log in and sync all workout, diet, and progress data to your mobile phone.
+          </p>
+        </div>
+        <button type="button" class="btn-icon modal-close" aria-label="Close modal">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem; overflow-y: auto;">
+        <!-- QR Code Section -->
+        <div class="text-center mb-4">
+          <div style="display: inline-block; padding: 12px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);">
+            <img id="sync-qr-image" src="" alt="Scan QR code to sync on mobile" style="width: 200px; height: 200px; display: block; border-radius: 8px;">
+          </div>
+          <p class="text-sm text-secondary mt-2">
+            Point your mobile camera at this QR code to open FitTrack Pro and sync instantly with zero setup.
+          </p>
+        </div>
+
+        <!-- One-Click Sync Link -->
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight: 600;">🔗 One-Click Sync URL</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="sync-share-url" class="input-text" readonly style="font-size: 0.82rem; font-family: monospace;">
+            <button type="button" class="btn btn-primary" id="btn-copy-sync-url" style="white-space: nowrap;">
+              📋 Copy Link
+            </button>
+          </div>
+          <small class="text-muted mt-1" style="display: block;">Send this link via WhatsApp, Telegram, or Notes to open directly on your mobile browser.</small>
+        </div>
+
+        <!-- Manual Sync Payload -->
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight: 600;">🔑 Direct Sync Code</label>
+          <textarea id="sync-manual-payload" class="input-text" rows="3" placeholder="Paste sync code from another device here..." style="font-size: 0.8rem; font-family: monospace;"></textarea>
+          <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-copy-sync-code">📋 Copy Code</button>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-apply-sync-code">📥 Import & Restore on This Device</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 0.85rem 1.5rem; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary modal-close">Done</button>
       </div>
     </div>
   </div>

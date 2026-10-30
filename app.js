@@ -649,30 +649,205 @@ const FitTrackAuth = {
   },
 
   saveUsers(users) {
-    localStorage.setItem(this.USERS_STORAGE_KEY, JSON.stringify(users));
+    try {
+      localStorage.setItem(this.USERS_STORAGE_KEY, JSON.stringify(users));
+    } catch {
+      // Storage restricted
+    }
+    this.pushUsersToServer(users);
+  },
+
+  async fetchUsersFromServer() {
+    try {
+      const resp = await fetch('/api/users', { cache: 'no-store' });
+      if (resp.ok) {
+        const serverUsers = await resp.json();
+        if (Array.isArray(serverUsers) && serverUsers.length > 0) {
+          const localUsers = this.getUsers();
+          const userMap = new Map();
+          localUsers.forEach(u => userMap.set(u.username.toLowerCase(), u));
+          serverUsers.forEach(u => userMap.set(u.username.toLowerCase(), u));
+          const merged = Array.from(userMap.values());
+          try {
+            localStorage.setItem(this.USERS_STORAGE_KEY, JSON.stringify(merged));
+          } catch {
+            // private mode
+          }
+          return merged;
+        }
+      }
+    } catch {
+      // Offline / static hosting
+    }
+    return null;
+  },
+
+  async pushUsersToServer(users) {
+    try {
+      await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(users)
+      });
+    } catch {
+      // Offline / static hosting
+    }
+  },
+
+  // Pure JS SHA-256 implementation (ensures mobile authentication never fails in non-HTTPS LAN contexts)
+  _sha256Bytes(bytes) {
+    function rightRotate(value, amount) {
+      return (value >>> amount) | (value << (32 - amount));
+    }
+    const words = [];
+    const bitLength = bytes.length * 8;
+    const hash = [
+      0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+      0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+    ];
+    const k = [
+      0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+      0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+      0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+      0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+      0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+      0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+      0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+      0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+    ];
+    const W = new Array(64);
+    for (let i = 0; i < bytes.length; i++) {
+      words[i >> 2] |= (bytes[i] & 0xff) << (24 - (i % 4) * 8);
+    }
+    words[bitLength >> 5] |= 0x80 << (24 - (bitLength % 32));
+    words[(((bitLength + 64) >> 9) << 4) + 15] = bitLength;
+
+    for (let i = 0; i < words.length; i += 16) {
+      let a = hash[0], b = hash[1], c = hash[2], d = hash[3],
+          e = hash[4], f = hash[5], g = hash[6], h = hash[7];
+      for (let j = 0; j < 64; j++) {
+        if (j < 16) {
+          W[j] = words[j + i] | 0;
+        } else {
+          const gamma0 = rightRotate(W[j - 15], 7) ^ rightRotate(W[j - 15], 18) ^ (W[j - 15] >>> 3);
+          const gamma1 = rightRotate(W[j - 2], 17) ^ rightRotate(W[j - 2], 19) ^ (W[j - 2] >>> 10);
+          W[j] = (W[j - 16] + gamma0 + W[j - 7] + gamma1) | 0;
+        }
+        const ch = (e & f) ^ (~e & g);
+        const maj = (a & b) ^ (a & c) ^ (b & c);
+        const sigma0 = rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22);
+        const sigma1 = rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25);
+        const t1 = (h + sigma1 + ch + k[j] + W[j]) | 0;
+        const t2 = (sigma0 + maj) | 0;
+        h = g; g = f; f = e; e = (d + t1) | 0;
+        d = c; c = b; b = a; a = (t1 + t2) | 0;
+      }
+      hash[0] = (hash[0] + a) | 0; hash[1] = (hash[1] + b) | 0;
+      hash[2] = (hash[2] + c) | 0; hash[3] = (hash[3] + d) | 0;
+      hash[4] = (hash[4] + e) | 0; hash[5] = (hash[5] + f) | 0;
+      hash[6] = (hash[6] + g) | 0; hash[7] = (hash[7] + h) | 0;
+    }
+    const out = new Uint8Array(32);
+    for (let i = 0; i < 8; i++) {
+      out[i * 4] = (hash[i] >>> 24) & 0xff;
+      out[i * 4 + 1] = (hash[i] >>> 16) & 0xff;
+      out[i * 4 + 2] = (hash[i] >>> 8) & 0xff;
+      out[i * 4 + 3] = hash[i] & 0xff;
+    }
+    return out;
+  },
+
+  _hmacSha256(keyBytes, msgBytes) {
+    const blockSize = 64;
+    let k = keyBytes;
+    if (k.length > blockSize) {
+      k = this._sha256Bytes(k);
+    }
+    const kPadded = new Uint8Array(blockSize);
+    kPadded.set(k);
+    const iPad = new Uint8Array(blockSize);
+    const oPad = new Uint8Array(blockSize);
+    for (let i = 0; i < blockSize; i++) {
+      iPad[i] = kPadded[i] ^ 0x36;
+      oPad[i] = kPadded[i] ^ 0x5c;
+    }
+    const inner = new Uint8Array(blockSize + msgBytes.length);
+    inner.set(iPad);
+    inner.set(msgBytes, blockSize);
+    const innerHash = this._sha256Bytes(inner);
+    const outer = new Uint8Array(blockSize + 32);
+    outer.set(oPad);
+    outer.set(innerHash, blockSize);
+    return this._sha256Bytes(outer);
+  },
+
+  _pbkdf2Sha256(passwordStr, saltHex, iterations = 100000, keyLengthBytes = 32) {
+    const enc = new TextEncoder();
+    const pwBytes = enc.encode(passwordStr);
+    const saltBytes = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+    const numBlocks = Math.ceil(keyLengthBytes / 32);
+    const out = new Uint8Array(keyLengthBytes);
+
+    for (let blockIndex = 1; blockIndex <= numBlocks; blockIndex++) {
+      const blockBytes = new Uint8Array(saltBytes.length + 4);
+      blockBytes.set(saltBytes);
+      blockBytes[saltBytes.length] = (blockIndex >>> 24) & 0xff;
+      blockBytes[saltBytes.length + 1] = (blockIndex >>> 16) & 0xff;
+      blockBytes[saltBytes.length + 2] = (blockIndex >>> 8) & 0xff;
+      blockBytes[saltBytes.length + 3] = blockIndex & 0xff;
+
+      let u = this._hmacSha256(pwBytes, blockBytes);
+      const xorSum = new Uint8Array(u);
+
+      for (let iter = 1; iter < iterations; iter++) {
+        u = this._hmacSha256(pwBytes, u);
+        for (let k = 0; k < 32; k++) {
+          xorSum[k] ^= u[k];
+        }
+      }
+
+      const start = (blockIndex - 1) * 32;
+      const len = Math.min(32, keyLengthBytes - start);
+      out.set(xorSum.subarray(0, len), start);
+    }
+
+    let hex = '';
+    for (let i = 0; i < out.length; i++) {
+      hex += ('0' + out[i].toString(16)).slice(-2);
+    }
+    return hex;
   },
 
   async hashPassword(password, saltHex) {
-    const enc = new TextEncoder();
-    const saltBuf = FitTrackVault.hexToBuffer(saltHex);
-    const keyMaterial = await crypto.subtle.importKey(
-      'raw',
-      enc.encode(password),
-      'PBKDF2',
-      false,
-      ['deriveBits']
-    );
-    const bits = await crypto.subtle.deriveBits(
-      {
-        name: 'PBKDF2',
-        salt: saltBuf,
-        iterations: 100000,
-        hash: 'SHA-256'
-      },
-      keyMaterial,
-      256
-    );
-    return FitTrackVault.bufferToHex(bits);
+    // 1. If Web Crypto Subtle is available (HTTPS & Localhost), use hardware-accelerated PBKDF2
+    if (typeof crypto !== 'undefined' && crypto.subtle && typeof crypto.subtle.importKey === 'function') {
+      try {
+        const enc = new TextEncoder();
+        const saltBuf = FitTrackVault.hexToBuffer(saltHex);
+        const keyMaterial = await crypto.subtle.importKey(
+          'raw',
+          enc.encode(password),
+          'PBKDF2',
+          false,
+          ['deriveBits']
+        );
+        const bits = await crypto.subtle.deriveBits(
+          {
+            name: 'PBKDF2',
+            salt: saltBuf,
+            iterations: 100000,
+            hash: 'SHA-256'
+          },
+          keyMaterial,
+          256
+        );
+        return FitTrackVault.bufferToHex(bits);
+      } catch (err) {
+        console.warn('[FitTrackAuth] Web Crypto deriveBits failed, using pure JS fallback:', err);
+      }
+    }
+    // 2. Pure JS standard PBKDF2 HMAC-SHA256 fallback (enables flawless mobile login on non-HTTPS LAN)
+    return this._pbkdf2Sha256(password, saltHex, 100000, 32);
   },
 
   async createAdminAccount(username, password) {
@@ -2335,15 +2510,57 @@ class FitTrackStore {
     // 3. Load data for this user
     this.data = this.loadData();
 
-    // 4. Admin auto-recovery if food logs or daily logs are missing and user has onboarded
+    // 4. Asynchronously sync latest data from multi-device server if available
+    const userKey = (user && user.role !== 'admin') ? (user.username || 'member') : 'admin';
+    this.fetchDataFromServer(userKey).then(serverData => {
+      if (serverData && window.app) {
+        window.app.render();
+      }
+    });
+
+    // 5. Admin auto-recovery if food logs or daily logs are missing and user has onboarded
     if ((!user || user.role === 'admin') && this.data?.profile?.hasOnboarded && (!this.data.foodEntries || this.data.foodEntries.length === 0)) {
       this.attemptAdminRecovery();
     }
 
-    // 5. Write an immediate backup snapshot for the active user
+    // 6. Write an immediate backup snapshot for the active user
     this.backupCurrentUserData();
 
     return this.data;
+  }
+
+  async fetchDataFromServer(username) {
+    if (!username) return null;
+    try {
+      const resp = await fetch(`/api/data?user=${encodeURIComponent(username)}`, { cache: 'no-store' });
+      if (resp.ok) {
+        const serverData = await resp.json();
+        if (serverData && typeof serverData === 'object' && Object.keys(serverData).length > 0) {
+          const migrated = this.migrateAndValidate(serverData);
+          try {
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(migrated));
+          } catch (e) {}
+          this.data = migrated;
+          return migrated;
+        }
+      }
+    } catch {
+      // Offline / static hosting fallback
+    }
+    return null;
+  }
+
+  async pushDataToServer(username, dataToSave) {
+    if (!username || !dataToSave) return;
+    try {
+      await fetch(`/api/data?user=${encodeURIComponent(username)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataToSave)
+      });
+    } catch {
+      // Offline / static hosting fallback
+    }
   }
 
   /**
@@ -2643,6 +2860,12 @@ class FitTrackStore {
 
       // Write an automated backup snapshot
       this.backupCurrentUserData(dataToSave);
+
+      // Multi-device server synchronization
+      const userKey = (this.currentUser && this.currentUser.role !== 'admin')
+        ? (this.currentUser.username || 'member')
+        : 'admin';
+      this.pushDataToServer(userKey, dataToSave);
 
       this.data = dataToSave;
       return { success: true };
@@ -3363,6 +3586,16 @@ class FitTrackApp {
   }
 
   init() {
+    // Process instant device pairing token from URL if present (#sync=...)
+    this.processDeviceSyncHash();
+
+    // Refresh central users list from multi-device server if connected
+    FitTrackAuth.fetchUsersFromServer().then(users => {
+      if (users && !FitTrackAuth.isAuthenticated()) {
+        this.renderLoginView();
+      }
+    });
+
     // Initialize chart defaults
     FitTrackCharts.initThemeDefaults();
 
@@ -3413,8 +3646,8 @@ class FitTrackApp {
       if (initialHash === 'admin' && !FitTrackAuth.isAdmin()) initialHash = 'dashboard';
       this.navigate(initialHash, false);
 
-      // Check if logged in user requires first-time onboarding or target calibration
-      if (currentUser && !this.store.data.profile?.hasOnboarded) {
+      // Only open onboarding wizard if explicitly requested via hash #onboarding
+      if (currentUser && window.location.hash === '#onboarding') {
         this.openOnboardingModal();
       }
     }
@@ -4339,16 +4572,9 @@ class FitTrackApp {
             this.renderHeaderUserStatus();
             userLoginForm.reset();
 
-            if (!this.store.data.profile?.hasOnboarded) {
-              this.showToast(`Welcome, ${res.user.displayName || res.user.username}! Let's set up your personalized fitness targets.`, 'info');
-              this.navigate('dashboard');
-              this.render();
-              this.openOnboardingModal();
-            } else {
-              this.showToast(`Welcome back, ${res.user.displayName || res.user.username}!`, 'success');
-              this.navigate('dashboard');
-              this.render();
-            }
+            this.showToast(`Welcome back, ${res.user.displayName || res.user.username}!`, 'success');
+            this.navigate('dashboard');
+            this.render();
           } else {
             if (alertBox) {
               alertBox.textContent = res.message || 'Invalid username or password.';
@@ -4531,6 +4757,86 @@ class FitTrackApp {
         this.store.data.goals.autoGoalAdjust = e.target.checked;
         this.store.saveData();
         this.showToast(e.target.checked ? 'Adaptive goal recommendations enabled.' : 'Adaptive goal recommendations disabled.', 'info');
+      });
+    }
+
+    // Mobile Pairing & Multi-Device Sync Buttons
+    document.querySelectorAll('.btn-pair-device, #btn-sidebar-pair, #btn-drawer-pair, #btn-login-pair').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.openDeviceSyncModal();
+      });
+    });
+
+    const copySyncUrlBtn = document.getElementById('btn-copy-sync-url');
+    if (copySyncUrlBtn) {
+      copySyncUrlBtn.addEventListener('click', async () => {
+        const input = document.getElementById('sync-share-url');
+        if (input && input.value) {
+          try {
+            await navigator.clipboard.writeText(input.value);
+            this.showToast('📋 Mobile pairing link copied! Open on your mobile browser.', 'success');
+          } catch {
+            input.select();
+            document.execCommand('copy');
+            this.showToast('📋 Mobile pairing link copied to clipboard!', 'success');
+          }
+        }
+      });
+    }
+
+    const copySyncCodeBtn = document.getElementById('btn-copy-sync-code');
+    if (copySyncCodeBtn) {
+      copySyncCodeBtn.addEventListener('click', async () => {
+        const input = document.getElementById('sync-manual-payload');
+        if (input && input.value) {
+          try {
+            await navigator.clipboard.writeText(input.value);
+            this.showToast('📋 Direct sync code copied!', 'success');
+          } catch {
+            input.select();
+            document.execCommand('copy');
+            this.showToast('📋 Code copied to clipboard!', 'success');
+          }
+        }
+      });
+    }
+
+    const applySyncCodeBtn = document.getElementById('btn-apply-sync-code');
+    if (applySyncCodeBtn) {
+      applySyncCodeBtn.addEventListener('click', () => {
+        const input = document.getElementById('sync-manual-payload');
+        const code = input?.value?.trim();
+        if (!code) {
+          this.showToast('Please paste a sync code first.', 'warning');
+          return;
+        }
+        try {
+          const jsonStr = decodeURIComponent(atob(code));
+          const payload = JSON.parse(jsonStr);
+          if (payload && payload.user) {
+            if (Array.isArray(payload.users) && payload.users.length > 0) {
+              localStorage.setItem(FitTrackAuth.USERS_STORAGE_KEY, JSON.stringify(payload.users));
+            }
+            const session = {
+              user: payload.user,
+              loginTime: new Date().toISOString()
+            };
+            localStorage.setItem(FitTrackAuth.SESSION_STORAGE_KEY, JSON.stringify(session));
+            if (payload.data && typeof payload.data === 'object') {
+              const storageKey = (payload.user.role === 'admin')
+                ? 'fittrack_app_data_v1'
+                : `fittrack_user_data_${payload.user.id || payload.user.username}`;
+              if (payload.data.profile) payload.data.profile.hasOnboarded = true;
+              localStorage.setItem(storageKey, JSON.stringify(payload.data));
+            }
+            this.showToast(`✓ Paired successfully with ${payload.user.displayName || payload.user.username}!`, 'success');
+            setTimeout(() => window.location.reload(), 300);
+          } else {
+            this.showToast('Invalid sync payload structure.', 'error');
+          }
+        } catch (e) {
+          this.showToast('Failed to parse sync code: ' + e.message, 'error');
+        }
       });
     }
 
@@ -7563,6 +7869,96 @@ class FitTrackApp {
 
   closeAllModals() {
     document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+  }
+
+  processDeviceSyncHash() {
+    try {
+      const hash = window.location.hash || '';
+      if (hash.startsWith('#sync=')) {
+        const rawToken = hash.slice(6);
+        const jsonStr = decodeURIComponent(atob(rawToken));
+        const payload = JSON.parse(jsonStr);
+        if (payload && payload.user) {
+          // 1. Sync users list
+          if (Array.isArray(payload.users) && payload.users.length > 0) {
+            localStorage.setItem(FitTrackAuth.USERS_STORAGE_KEY, JSON.stringify(payload.users));
+          }
+          // 2. Set active authenticated session
+          const session = {
+            user: payload.user,
+            loginTime: new Date().toISOString()
+          };
+          localStorage.setItem(FitTrackAuth.SESSION_STORAGE_KEY, JSON.stringify(session));
+
+          // 3. Sync full user application state
+          if (payload.data && typeof payload.data === 'object') {
+            const storageKey = (payload.user.role === 'admin')
+              ? 'fittrack_app_data_v1'
+              : `fittrack_user_data_${payload.user.id || payload.user.username}`;
+            if (payload.data.profile) {
+              payload.data.profile.hasOnboarded = true;
+            }
+            localStorage.setItem(storageKey, JSON.stringify(payload.data));
+          }
+
+          // Clean URL hash so refreshing stays on the clean dashboard
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+
+          this.showToast(`📱 Seamlessly paired! Welcome back, ${payload.user.displayName || payload.user.username}!`, 'success');
+        }
+      }
+    } catch (err) {
+      console.warn('[FitTrack] Device sync token parse error:', err);
+    }
+  }
+
+  generateMobileSyncPayload() {
+    const currentUser = FitTrackAuth.getCurrentUser();
+    if (!currentUser) return null;
+    const users = FitTrackAuth.getUsers();
+    const data = this.store.data;
+    if (data && data.profile) {
+      data.profile.hasOnboarded = true;
+    }
+    const payload = {
+      user: currentUser,
+      users: users,
+      data: data,
+      syncedAt: new Date().toISOString()
+    };
+    const jsonStr = JSON.stringify(payload);
+    const token = btoa(encodeURIComponent(jsonStr));
+    const origin = (window.location.origin && !window.location.origin.includes('file://'))
+      ? window.location.origin
+      : 'http://localhost:8000';
+    const fullUrl = `${origin}${window.location.pathname}#sync=${token}`;
+    return { token, fullUrl };
+  }
+
+  openDeviceSyncModal() {
+    const syncModal = document.getElementById('modal-device-sync');
+    if (!syncModal) return;
+
+    const payloadObj = this.generateMobileSyncPayload();
+    if (!payloadObj) {
+      this.showToast('Please sign in first to generate a mobile pairing link.', 'warning');
+      return;
+    }
+
+    const urlInput = document.getElementById('sync-share-url');
+    if (urlInput) urlInput.value = payloadObj.fullUrl;
+
+    const codeInput = document.getElementById('sync-manual-payload');
+    if (codeInput) codeInput.value = payloadObj.token;
+
+    const qrImg = document.getElementById('sync-qr-image');
+    if (qrImg) {
+      qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payloadObj.fullUrl)}`;
+    }
+
+    syncModal.classList.add('active');
   }
 
   escapeHTML(str) {

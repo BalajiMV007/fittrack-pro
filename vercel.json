@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "name": "fittrack-pro",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}
