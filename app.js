@@ -648,13 +648,13 @@ const FitTrackAuth = {
     return users.some(u => u.role === 'admin');
   },
 
-  saveUsers(users) {
+  async saveUsers(users) {
     try {
       localStorage.setItem(this.USERS_STORAGE_KEY, JSON.stringify(users));
     } catch {
       // Storage restricted
     }
-    this.pushUsersToServer(users);
+    await this.pushUsersToServer(users);
   },
 
   async fetchUsersFromServer() {
@@ -883,15 +883,30 @@ const FitTrackAuth = {
 
   async login(username, password) {
     username = (username || '').trim().toLowerCase();
-    const users = this.getUsers();
-    const user = users.find(u => u.username.toLowerCase() === username);
+    password = (password || '').trim();
+    if (!username || !password) {
+      return { success: false, message: 'Please enter both username and password.' };
+    }
+
+    let users = this.getUsers();
+    let user = users.find(u => u.username.toLowerCase() === username);
+
+    // If user not found in local storage cache, query multi-device server immediately!
     if (!user) {
-      return { success: false, message: 'Invalid username or password.' };
+      const serverUsers = await this.fetchUsersFromServer();
+      if (serverUsers) {
+        users = serverUsers;
+        user = users.find(u => u.username.toLowerCase() === username);
+      }
+    }
+
+    if (!user) {
+      return { success: false, message: `Account "${username}" was not found. Please verify spelling or contact administrator.` };
     }
 
     const hash = await this.hashPassword(password, user.salt);
     if (hash !== user.passwordHash) {
-      return { success: false, message: 'Invalid username or password.' };
+      return { success: false, message: `Incorrect password for user "${username}".` };
     }
 
     if (user.role === 'admin' && FitTrackVault.isVaultConfigured()) {
@@ -959,6 +974,7 @@ const FitTrackAuth = {
       return { success: false, message: 'Permission denied: Only administrators can create users.' };
     }
     username = (username || '').trim().toLowerCase();
+    password = (password || '').trim();
     if (!username || username.length < 3) {
       return { success: false, message: 'Username must be at least 3 characters.' };
     }
@@ -984,8 +1000,29 @@ const FitTrackAuth = {
     };
 
     users.push(newUser);
-    this.saveUsers(users);
+    await this.saveUsers(users);
     return { success: true, user: newUser };
+  },
+
+  async resetPasswordByAdmin(userId, newPassword) {
+    if (!this.isAdmin()) {
+      return { success: false, message: 'Permission denied: Only administrators can reset passwords.' };
+    }
+    newPassword = (newPassword || '').trim();
+    if (!newPassword || newPassword.length < 6) {
+      return { success: false, message: 'New password must be at least 6 characters.' };
+    }
+    const users = this.getUsers();
+    const user = users.find(u => u.id === userId);
+    if (!user) {
+      return { success: false, message: 'User not found.' };
+    }
+    const salt = FitTrackVault.bufferToHex(crypto.getRandomValues(new Uint8Array(16)));
+    const passwordHash = await this.hashPassword(newPassword, salt);
+    user.salt = salt;
+    user.passwordHash = passwordHash;
+    await this.saveUsers(users);
+    return { success: true, user, message: `Password for "${user.username}" reset successfully!` };
   },
 
   deleteUserByAdmin(userId) {
@@ -3589,9 +3626,13 @@ class FitTrackApp {
     // Process instant device pairing token from URL if present (#sync=...)
     this.processDeviceSyncHash();
 
-    // Refresh central users list from multi-device server if connected
-    FitTrackAuth.fetchUsersFromServer().then(users => {
-      if (users && !FitTrackAuth.isAuthenticated()) {
+    // Refresh central users list from multi-device server and ensure two-way sync
+    FitTrackAuth.fetchUsersFromServer().then(serverUsers => {
+      const currentUsers = FitTrackAuth.getUsers();
+      if (currentUsers.length > 1) {
+        FitTrackAuth.pushUsersToServer(currentUsers);
+      }
+      if (!FitTrackAuth.isAuthenticated()) {
         this.renderLoginView();
       }
     });
@@ -4553,8 +4594,8 @@ class FitTrackApp {
     if (userLoginForm) {
       userLoginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const username = document.getElementById('login-username')?.value.trim();
-        const password = document.getElementById('login-password')?.value;
+        const username = document.getElementById('login-username')?.value?.trim();
+        const password = document.getElementById('login-password')?.value?.trim();
         const btn = document.getElementById('btn-submit-login');
         const alertBox = document.getElementById('login-feedback-alert');
 
@@ -4637,8 +4678,8 @@ class FitTrackApp {
     if (createUserForm) {
       createUserForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const username = document.getElementById('new-user-username')?.value.trim();
-        const password = document.getElementById('new-user-password')?.value;
+        const username = document.getElementById('new-user-username')?.value?.trim();
+        const password = document.getElementById('new-user-password')?.value?.trim();
         const role = document.getElementById('new-user-role')?.value || 'user';
 
         const res = await FitTrackAuth.createUserByAdmin(username, password, role);
@@ -4736,7 +4777,7 @@ class FitTrackApp {
     }
 
     // Password Visibility Toggles
-    ['btn-toggle-login-pw', 'btn-toggle-setup-pw'].forEach(id => {
+    ['btn-toggle-login-pw', 'btn-toggle-setup-pw', 'btn-toggle-new-user-pw'].forEach(id => {
       const btn = document.getElementById(id);
       if (btn) {
         btn.addEventListener('click', (e) => {
@@ -7321,13 +7362,39 @@ class FitTrackApp {
           <td><span class="status-badge success">Active</span></td>
           <td>${dateStr}</td>
           <td>
-            <button type="button" class="btn-delete-user" data-user-id="${u.id}" ${deleteDisabled ? 'disabled title="Cannot delete current or primary administrator"' : ''}>
-              🗑️ Delete
-            </button>
+            <div style="display: flex; gap: 6px; justify-content: flex-end;">
+              <button type="button" class="btn btn-outline btn-sm btn-reset-user-pw" data-user-id="${u.id}" data-username="${this.escapeHTML(u.username)}" title="Reset user password">
+                🔑 Reset PW
+              </button>
+              <button type="button" class="btn-delete-user" data-user-id="${u.id}" ${deleteDisabled ? 'disabled title="Cannot delete current or primary administrator"' : ''}>
+                🗑️ Delete
+              </button>
+            </div>
           </td>
         </tr>
       `;
     }).join('');
+
+    // Wire reset password buttons
+    tbody.querySelectorAll('.btn-reset-user-pw').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const userId = e.currentTarget.getAttribute('data-user-id');
+        const username = e.currentTarget.getAttribute('data-username');
+        const newPw = window.prompt(`Enter a new password for account "${username}" (min 6 characters):`);
+        if (newPw === null) return;
+        if (!newPw.trim() || newPw.trim().length < 6) {
+          this.showToast('Password must be at least 6 characters.', 'error');
+          return;
+        }
+        const res = await FitTrackAuth.resetPasswordByAdmin(userId, newPw.trim());
+        if (res.success) {
+          this.showToast(`✓ Password for "${username}" updated to "${newPw.trim()}". User can now log in immediately!`, 'success');
+          this.renderAdminUsersTable();
+        } else {
+          this.showToast(res.message, 'error');
+        }
+      });
+    });
 
     // Wire delete buttons
     tbody.querySelectorAll('.btn-delete-user').forEach(btn => {
