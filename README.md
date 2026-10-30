@@ -2,7 +2,7 @@
 
 [![Architecture](https://img.shields.io/badge/Architecture-Offline--First%20Vanilla%20JS-success?style=for-the-badge&logo=javascript)](file:///c:/Users/balaj_m3g5oyd/Desktop/myproject/app.js)
 [![Security](https://img.shields.io/badge/Security-AES--256--GCM%20%7C%20PBKDF2-blue?style=for-the-badge&logo=shield)](file:///c:/Users/balaj_m3g5oyd/Desktop/myproject/app.js)
-[![Tests](https://img.shields.io/badge/Unit%20Tests-72%2F72%20Passing-brightgreen?style=for-the-badge&logo=checkmarx)](file:///c:/Users/balaj_m3g5oyd/Desktop/myproject/tests.html)
+[![Tests](https://img.shields.io/badge/Unit%20Tests-76%2F76%20Passing-brightgreen?style=for-the-badge&logo=checkmarx)](file:///c:/Users/balaj_m3g5oyd/Desktop/myproject/tests.html)
 [![E2E Verification](https://img.shields.io/badge/E2E%20Coverage-40%2F40%20Verified-brightgreen?style=for-the-badge&logo=testinglibrary)](file:///c:/Users/balaj_m3g5oyd/Desktop/myproject/run_e2e_test.py)
 [![Deployment](https://img.shields.io/badge/Deployment-GitHub%20Pages%20Ready-orange?style=for-the-badge&logo=github)](file:///c:/Users/balaj_m3g5oyd/Desktop/myproject/index.html)
 
@@ -30,7 +30,7 @@ http://localhost:8000
 FitTrack contains comprehensive automated testing for all scientific calculations, cryptographic operations, multi-tenant persistence, and DOM integrity:
 
 ```bash
-# Run unit & cryptographic verification suite (72 assertions)
+# Run unit & cryptographic verification suite (76 assertions)
 python run_tests.py
 
 # Run end-to-end DOM structure & responsive view verification (40 assertions)

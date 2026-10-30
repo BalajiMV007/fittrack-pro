@@ -1209,6 +1209,62 @@
         assertEquals(t2.recomp.targetWeight, 65.7, 'Target weight at 10% BF is 65.7 kg');
         assertEquals(t2.recomp.fatMassToLose, 10.1, 'Fat to lose is 10.1 kg');
       });
+
+      it('pre-seeds default administrator credentials and guarantees hasAdminUser is true on fresh sessions', () => {
+        localStorage.removeItem('fittrack_users_v1');
+        const users = FitTrackAuth.getUsers();
+        assert(users.length >= 1, 'Default admin pre-seeded when localStorage is empty');
+        assertEquals(users[0].username, 'admin', 'Default admin username is admin');
+        assertEquals(users[0].role, 'admin', 'Default admin has administrator role');
+        assert(FitTrackAuth.hasAdminUser(), 'hasAdminUser is always true');
+      });
+
+      it('enforces standard login card display and strictly conceals first-time setup from visitors', () => {
+        const app = new FitTrackApp();
+        localStorage.removeItem('fittrack_session_v1');
+        app.renderLoginView();
+        const stdCard = document.getElementById('card-standard-login');
+        const setupCard = document.getElementById('card-first-time-setup');
+        if (stdCard) assertEquals(stdCard.style.display, 'block', 'Standard login card is visible');
+        if (setupCard) assertEquals(setupCard.style.display, 'none', 'First-time setup card is hidden');
+      });
+
+      it('morning weight calibration handles both empty trigger and custom weight input seamlessly', () => {
+        const app = new FitTrackApp();
+        app.store.data.profile.weight = 75.8;
+        app.store.data.profile.goal = 'fat_loss';
+        let input = document.getElementById('dash-morning-weight-input');
+        if (!input) {
+          input = document.createElement('input');
+          input.id = 'dash-morning-weight-input';
+          document.body.appendChild(input);
+        }
+        input.value = '';
+        app.handleMorningWeightSubmit();
+        assertEquals(app.store.data.profile.weight, 75.8, 'Calibrates with existing weight when input is blank');
+
+        input.value = '75.5';
+        app.handleMorningWeightSubmit();
+        assertEquals(app.store.data.profile.weight, 75.5, 'Updates to 75.5 kg when custom weight is entered');
+        const todayStr = FitTrackCalc.formatDateLocal();
+        const todayLog = app.store.getDailyLog(todayStr);
+        assertEquals(todayLog.weight, 75.5, 'Daily log weight updated to 75.5 kg');
+      });
+
+      it('unifies activity level and targets between evaluateTargets and calculateTargets', () => {
+        const app = new FitTrackApp();
+        app.store.data.measurements = [];
+        app.store.data.profile = {
+          weight: 75.8,
+          height: 169,
+          age: 24,
+          sex: 'male',
+          goal: 'fat_loss'
+        };
+        const baseline = FitTrackCalc.calculateTargets(app.store.data.profile);
+        const evalResult = FitTrackAdaptive.evaluateTargets(app.store);
+        assertEquals(baseline.targetCalories, evalResult.recommendedCalories, 'Target calories match between baseline and adaptive evaluation');
+      });
     });
 
     // Run and render results sequentially in exact declaration order

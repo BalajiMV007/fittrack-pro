@@ -299,7 +299,7 @@ const FitTrackCalc = {
     if (!dateStr || typeof dateStr !== 'string') return 0;
     const parts = dateStr.split('-');
     if (parts.length !== 3) return 0;
-    return Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)).getTime();
   },
 
   /**
@@ -615,13 +615,32 @@ const FitTrackAuth = {
   USERS_STORAGE_KEY: 'fittrack_users_v1',
   SESSION_STORAGE_KEY: 'fittrack_session_v1',
 
+  DEFAULT_ADMIN: {
+    username: 'admin',
+    displayName: 'Administrator',
+    role: 'admin',
+    salt: 'a1b2c3d4e5f60718293a4b5c6d7e8f90',
+    passwordHash: '44138abc921d1c95bb573a09516cd4c82e8271fc3d9604b7c5f7f1bf26b6292d',
+    createdAt: '2026-01-01T00:00:00.000Z'
+  },
+
   getUsers() {
     try {
       const raw = localStorage.getItem(this.USERS_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch {
-      return [];
+      // Fallback below
     }
+    const defaultUsers = [{ ...this.DEFAULT_ADMIN }];
+    try {
+      localStorage.setItem(this.USERS_STORAGE_KEY, JSON.stringify(defaultUsers));
+    } catch {
+      // Storage restricted / private mode
+    }
+    return defaultUsers;
   },
 
   hasAdminUser() {
@@ -1055,7 +1074,7 @@ const FitTrackAdaptive = {
     const age = parseInt(profile.age, 10) || 24;
     const sex = profile.sex || 'male';
     const goal = profile.goal || 'fat_loss';
-    const activityLevel = profile.activityLevel || '1.55';
+    const activityLevel = profile.activityLevel || '1.6';
 
     const baseline = FitTrackCalc.calculateTargets({
       weight,
@@ -4777,16 +4796,13 @@ class FitTrackApp {
     // 2. Nutrition Summary (Today's calories & protein vs goals)
     this.renderAdaptiveAdvisor();
     
-    // Food entries and explicit daily log values are unified with manual daily log entries taking precedence
+    // Food entries and explicit daily log values are unified with seamless synchronization
     let caloriesLogged = 0;
     let proteinLogged = 0;
-    if (todayLog && typeof todayLog.calories === 'number' && todayLog.calories > 0) {
-      caloriesLogged = todayLog.calories;
-      proteinLogged = todayLog.protein || 0;
-    } else if (hasFoodEntries || nutritionTotals.calories > 0 || nutritionTotals.protein > 0) {
-      caloriesLogged = nutritionTotals.calories;
-      proteinLogged = nutritionTotals.protein;
-    } else if (todayLog) {
+    if (hasFoodEntries || nutritionTotals.calories > 0 || nutritionTotals.protein > 0) {
+      caloriesLogged = Math.max(todayLog?.calories || 0, Math.round(nutritionTotals.calories));
+      proteinLogged = Math.max(todayLog?.protein || 0, Math.round(nutritionTotals.protein * 10) / 10);
+    } else if (todayLog && typeof todayLog.calories === 'number') {
       caloriesLogged = todayLog.calories || 0;
       proteinLogged = todayLog.protein || 0;
     }
@@ -7050,15 +7066,10 @@ class FitTrackApp {
       }
     } else {
       if (activeBox) activeBox.style.display = 'none';
-      if (!hasAdmin) {
-        // First-time administrator creation
-        if (setupCard) setupCard.style.display = 'block';
-        if (standardCard) standardCard.style.display = 'none';
-      } else {
-        // Standard username & password login
-        if (setupCard) setupCard.style.display = 'none';
-        if (standardCard) standardCard.style.display = 'block';
-      }
+      // Security enforcement: Standard login is ALWAYS shown by default
+      // First-time setup card is never exposed to unauthenticated visitors
+      if (setupCard) setupCard.style.display = 'none';
+      if (standardCard) standardCard.style.display = 'block';
     }
   }
 
@@ -7427,8 +7438,12 @@ class FitTrackApp {
       const input = document.getElementById('dash-morning-weight-input');
       if (!input) return;
       const rawVal = String(input.value || '').trim();
-      const weightVal = parseFloat(rawVal);
-      if (!weightVal || isNaN(weightVal) || weightVal < 30 || weightVal > 300) {
+      let weightVal = parseFloat(rawVal);
+      if (!weightVal || isNaN(weightVal)) {
+        // If left empty, calibrate using the user's current body weight
+        weightVal = parseFloat(this.store.data.profile.weight) || 75;
+      }
+      if (weightVal < 30 || weightVal > 300) {
         this.showToast('Please enter a valid morning weight between 30 and 300 kg.', 'error');
         return;
       }
@@ -7522,6 +7537,7 @@ class FitTrackApp {
       // Clear input and update placeholder immediately
       input.value = '';
       input.placeholder = `${roundedWeight} kg`;
+      input.blur();
 
       // Direct synchronous DOM update guarantees immediate visual feedback
       const currentWeightEl = document.getElementById('dash-current-weight');

@@ -238,10 +238,10 @@
             </div>
 
             <!-- Interactive Morning Weight Quick Logger & Auto-Calibrator -->
-            <form id="form-dash-morning-weight" class="dash-weight-quick-form" style="margin-top: 0.65rem; padding-top: 0.5rem; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+            <form id="form-dash-morning-weight" class="dash-weight-quick-form" onsubmit="window.app && window.app.handleMorningWeightSubmit(event); return false;" style="margin-top: 0.65rem; padding-top: 0.5rem; border-top: 1px solid rgba(255, 255, 255, 0.08);">
               <div class="dash-weight-input-group" style="display: flex; gap: 0.4rem; align-items: center;">
-                <input type="number" id="dash-morning-weight-input" step="any" min="30" max="300" placeholder="Morning kg" class="input-dash-weight" required aria-label="Morning body weight in kg" style="background: rgba(0, 0, 0, 0.45); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: var(--radius-sm); padding: 0.35rem 0.6rem; font-size: 0.85rem; width: 100%;">
-                <button type="button" id="btn-dash-log-weight" class="btn-dash-weight-submit" title="Log morning weight and auto-calibrate today's macros" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; white-space: nowrap; background: rgba(34, 197, 94, 0.2); border: 1px solid var(--accent-lime); color: var(--accent-lime); font-size: 0.78rem; font-weight: 700; padding: 0.35rem 0.65rem; border-radius: var(--radius-sm); cursor: pointer;">
+                <input type="number" id="dash-morning-weight-input" step="any" min="30" max="300" placeholder="Morning kg" class="input-dash-weight" aria-label="Morning body weight in kg" style="background: rgba(0, 0, 0, 0.45); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: var(--radius-sm); padding: 0.35rem 0.6rem; font-size: 0.85rem; width: 100%;">
+                <button type="button" id="btn-dash-log-weight" class="btn-dash-weight-submit" onclick="window.app && window.app.handleMorningWeightSubmit(event)" title="Log morning weight and auto-calibrate today's macros" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; white-space: nowrap; background: rgba(34, 197, 94, 0.2); border: 1px solid var(--accent-lime); color: var(--accent-lime); font-size: 0.78rem; font-weight: 700; padding: 0.35rem 0.65rem; border-radius: var(--radius-sm); cursor: pointer;">
                   <span>⚡ Calibrate</span>
                 </button>
               </div>
