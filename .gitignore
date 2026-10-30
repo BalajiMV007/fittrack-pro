@@ -1,0 +1,17 @@
+# FitTrack Git Ignore - Protect Personal Backups & Sensitive Local Files
+*.json
+!package*.json
+*.csv
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+__pycache__/
+*.pyc
+
+# Environment files
+.env
+.env.local
+

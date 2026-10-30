@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FitTrack Automated Test Runner</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .test-header {
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 1rem;
+    }
+    .test-summary-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-sm);
+      margin-top: 0.75rem;
+    }
+    .badge-pass {
+      background-color: rgba(34, 197, 94, 0.2);
+      color: var(--accent-lime);
+      border: 1px solid var(--accent-lime);
+    }
+    .badge-fail {
+      background-color: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid #ef4444;
+    }
+    .test-suite {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+    .suite-title {
+      background-color: var(--bg-card-elevated);
+      padding: 0.75rem 1.25rem;
+      font-size: 1rem;
+      font-weight: 700;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+    }
+    .test-case {
+      padding: 0.65rem 1.25rem;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.9rem;
+    }
+    .test-case:last-child {
+      border-bottom: none;
+    }
+    .test-status {
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: var(--radius-sm);
+    }
+    .status-ok {
+      background-color: rgba(34, 197, 94, 0.15);
+      color: var(--accent-lime);
+    }
+    .status-err {
+      background-color: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+    }
+    .test-error-msg {
+      color: #f87171;
+      font-family: monospace;
+      font-size: 0.8rem;
+      margin-top: 0.35rem;
+    }
+    .test-runner-actions {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-header">
+    <h1>FitTrack Automated Verification Suite</h1>
+    <p class="text-secondary">Testing Mifflin-St Jeor BMR/TDEE calculations, Epley 1RM formula, streak boundary rules, PR persistence, JSON/CSV exports, and data migrations.</p>
+    <div id="test-summary">
+      <div class="test-summary-badge badge-pass" id="summary-pill">
+        Running tests...
+      </div>
+    </div>
+  </div>
+
+  <div class="test-runner-actions">
+    <button type="button" class="btn btn-primary" onclick="runAllTests()">▶ Re-run All Tests</button>
+    <a href="index.html" class="btn btn-outline">← Back to FitTrack App</a>
+  </div>
+
+  <div id="test-results-container"></div>
+
+  <!-- Include App Logic -->
+  <script src="app.js"></script>
+  <script>
+    'use strict';
+
+    // Simple test harness
+    const suites = [];
+    let currentSuite = null;
+
+    function describe(suiteName, fn) {
+      currentSuite = { name: suiteName, tests: [] };
+      suites.push(currentSuite);
+      fn();
+    }
+
+    function it(testName, fn) {
+      currentSuite.tests.push({ name: testName, fn });
+    }
+
+    function assert(condition, message) {
+      if (!condition) {
+        throw new Error(message || 'Assertion failed');
+      }
+    }
+
+    function assertEquals(actual, expected, message) {
+      if (actual !== expected) {
+        throw new Error((message ? message + ': ' : '') + `Expected [${expected}] but got [${actual}]`);
+      }
+    }
+
+    // ==========================================
+    // TEST SUITES
+    // ==========================================
+
+    describe('1. Energy Expenditure & Target Calculations (Mifflin-St Jeor)', () => {
+      it('calculates BMR correctly for Male (75kg, 169cm, 24yo)', () => {
+        // 10*75 + 6.25*169 - 5*24 + 5 = 750 + 1056.25 - 120 + 5 = 1691.25 -> 1691
+        const bmr = FitTrackCalc.calculateBMR(75, 169, 24, 'male');
+        assertEquals(bmr, 1691, 'Male BMR should match Mifflin-St Jeor formula');
+      });
+
+      it('calculates BMR correctly for Female (60kg, 165cm, 25yo)', () => {
+        // 10*60 + 6.25*165 - 5*25 - 161 = 600 + 1031.25 - 125 - 161 = 1345.25 -> 1345
+        const bmr = FitTrackCalc.calculateBMR(60, 165, 25, 'female');
+        assertEquals(bmr, 1345, 'Female BMR should match Mifflin-St Jeor formula');
+      });
+
+      it('calculates TDEE using activity multiplier', () => {
+        const bmr = 1691;
+        const tdee = FitTrackCalc.calculateTDEE(bmr, 1.6);
+        assertEquals(tdee, 2706, 'TDEE should multiply BMR by 1.6');
+      });
+
+      it('recommends evidence-informed targets for fat loss with muscle retention', () => {
+        const profile = { weight: 75, height: 169, age: 24, sex: 'male', activityLevel: '1.6', goal: 'fat_loss' };
+        const targets = FitTrackCalc.calculateTargets(profile);
+
+        assert(targets.targetCalories >= 2200 && targets.targetCalories <= 2400, `Calories should be in moderate deficit: ${targets.targetCalories}`);
+        assertEquals(targets.proteinGrams, 150, 'Recommended protein at 2.0g/kg for 75kg should be 150g');
+        assertEquals(targets.proteinRangeMin, 120, 'Min protein (1.6g/kg) should be 120g');
+        assertEquals(targets.proteinRangeMax, 165, 'Max protein (2.2g/kg) should be 165g');
+        assert(targets.deficitKcal >= 300 && targets.deficitKcal <= 500, 'Deficit should be moderate (300-500 kcal)');
+      });
+
+      it('enforces safe dieting calorie floor', () => {
+        const lowProfile = { weight: 45, height: 150, age: 30, sex: 'female', activityLevel: '1.2', goal: 'fat_loss' };
+        const targets = FitTrackCalc.calculateTargets(lowProfile);
+        assert(targets.targetCalories >= 1500, 'Calorie target must never be dangerously low');
+      });
+    });
+
+    describe('2. Strength Calculations & Epley 1RM Formula', () => {
+      it('calculates actual 1RM when reps === 1', () => {
+        const res = FitTrackCalc.calculate1RM(100, 1);
+        assertEquals(res.estimated1RM, 100);
+        assertEquals(res.isActual1RM, true, 'Reps === 1 should be flagged as Actual 1RM');
+      });
+
+      it('calculates estimated 1RM using Epley: W * (1 + R / 30)', () => {
+        // 80 * (1 + 10 / 30) = 80 * 1.3333 = 106.7
+        const res = FitTrackCalc.calculate1RM(80, 10);
+        assertEquals(res.estimated1RM, 106.7);
+        assertEquals(res.isActual1RM, false, 'Reps > 1 should be flagged as estimated');
+      });
+
+      it('handles zero or invalid numbers gracefully', () => {
+        const res = FitTrackCalc.calculate1RM(0, 5);
+        assertEquals(res.estimated1RM, 0);
+        assertEquals(res.isActual1RM, false);
+      });
+    });
+
+    describe('3. Streak Mechanics & Calendar Boundaries', () => {
+      it('counts streak as 0 when no logs exist', () => {
+        const res = FitTrackCalc.calculateStreaks([]);
+        assertEquals(res.currentStreak, 0);
+        assertEquals(res.longestStreak, 0);
+        assertEquals(res.todayCompleted, false);
+      });
+
+      it('increments streak for consecutive completed days', () => {
+        const logs = [
+          { date: '2026-10-26', completed: true },
+          { date: '2026-10-27', completed: true },
+          { date: '2026-10-28', completed: true }
+        ];
+        const res = FitTrackCalc.calculateStreaks(logs, '2026-10-28');
+        assertEquals(res.currentStreak, 3);
+        assertEquals(res.longestStreak, 3);
+        assertEquals(res.todayCompleted, true);
+      });
+
+      it('allows streak to remain active today if yesterday was completed', () => {
+        const logs = [
+          { date: '2026-10-26', completed: true },
+          { date: '2026-10-27', completed: true }
+          // 2026-10-28 is today and not yet completed
+        ];
+        const res = FitTrackCalc.calculateStreaks(logs, '2026-10-28');
+        assertEquals(res.currentStreak, 2, 'Active streak should carry over yesterday so user can log today');
+        assertEquals(res.todayCompleted, false);
+      });
+
+      it('breaks streak when a day is missing', () => {
+        const logs = [
+          { date: '2026-10-25', completed: true },
+          // 2026-10-26 missing
+          { date: '2026-10-27', completed: true },
+          { date: '2026-10-28', completed: true }
+        ];
+        const res = FitTrackCalc.calculateStreaks(logs, '2026-10-28');
+        assertEquals(res.currentStreak, 2, 'Current streak should only count consecutive run from Oct 27');
+        assertEquals(res.longestStreak, 2);
+      });
+
+      it('counts rest days as completed when marked completed', () => {
+        const logs = [
+          { date: '2026-10-27', completed: true, workoutStatus: 'workout' },
+          { date: '2026-10-28', completed: true, workoutStatus: 'rest' } // Rest day saved!
+        ];
+        const res = FitTrackCalc.calculateStreaks(logs, '2026-10-28');
+        assertEquals(res.currentStreak, 2, 'Rest days must count toward streak if log is saved');
+      });
+
+      it('handles month and year boundaries correctly', () => {
+        const logs = [
+          { date: '2025-12-31', completed: true },
+          { date: '2026-01-01', completed: true },
+          { date: '2026-01-02', completed: true }
+        ];
+        const res = FitTrackCalc.calculateStreaks(logs, '2026-01-02');
+        assertEquals(res.currentStreak, 3, 'Consecutive days across year boundary must increment streak');
+      });
+
+      it('tracks longest streak even after a break occurs', () => {
+        const logs = [
+          // 5-day streak
+          { date: '2026-01-01', completed: true },
+          { date: '2026-01-02', completed: true },
+          { date: '2026-01-03', completed: true },
+          { date: '2026-01-04', completed: true },
+          { date: '2026-01-05', completed: true },
+          // Gap
+          // New 2-day streak
+          { date: '2026-01-10', completed: true },
+          { date: '2026-01-11', completed: true }
+        ];
+        const res = FitTrackCalc.calculateStreaks(logs, '2026-01-11');
+        assertEquals(res.currentStreak, 2);
+        assertEquals(res.longestStreak, 5, 'Longest historical streak should be 5');
+      });
+    });
+
+    describe('4. PR Engine & Performance Preservation', () => {
+      it('records new PR and updates exercisePRs accurately', () => {
+        const store = new FitTrackStore();
+        store.data.workouts = [];
+        store.data.exercisePRs = {};
+
+        const workout1 = {
+          id: 'w-test-1',
+          date: '2026-10-20',
+          name: 'Chest Day',
+          exercises: [
+            {
+              name: 'Barbell Bench Press',
+              muscleGroup: 'Chest',
+              isPrimary: true,
+              sets: [{ weight: 80, reps: 5 }] // Est 1RM: 80 * (1 + 5/30) = 93.3
+            }
+          ]
+        };
+
+        store.saveWorkout(workout1);
+        const pr = store.data.exercisePRs['barbell bench press'];
+        assert(pr !== undefined, 'PR record should be created');
+        assertEquals(pr.bestWeight, 80);
+        assertEquals(pr.bestEst1RM, 93.3);
+      });
+
+      it('strictly preserves historical PR when a later session lifts lighter', () => {
+        const store = new FitTrackStore();
+        store.data.workouts = [];
+        store.data.exercisePRs = {};
+
+        // Day 1: Heavy PR
+        store.saveWorkout({
+          id: 'w-heavy',
+          date: '2026-10-20',
+          name: 'Heavy Day',
+          exercises: [{ name: 'Squat', muscleGroup: 'Legs', isPrimary: true, sets: [{ weight: 120, reps: 5 }] }] // 1RM ~140
+        });
+
+        // Day 2: Light recovery session
+        store.saveWorkout({
+          id: 'w-light',
+          date: '2026-10-23',
+          name: 'Light Day',
+          exercises: [{ name: 'Squat', muscleGroup: 'Legs', isPrimary: true, sets: [{ weight: 90, reps: 5 }] }]
+        });
+
+        const pr = store.data.exercisePRs['squat'];
+        assertEquals(pr.bestWeight, 120, 'Best weight must not be overwritten by lighter workout');
+        assertEquals(pr.bestEst1RM, 140, 'Best est 1RM must remain from the heavy session');
+      });
+    });
+
+    describe('5. Data Persistence, Duplicate Handling & Serialization', () => {
+      it('prevents duplicate daily logs on the same date by updating', () => {
+        const store = new FitTrackStore();
+        store.data.dailyLogs = [];
+
+        store.saveDailyLog({ date: '2026-10-28', calories: 2000, protein: 140, completed: true });
+        assertEquals(store.data.dailyLogs.length, 1);
+
+        // Save again for same date with updated calories
+        store.saveDailyLog({ date: '2026-10-28', calories: 2150, protein: 155, completed: true });
+        assertEquals(store.data.dailyLogs.length, 1, 'Should NOT create duplicate entry for same date');
+        assertEquals(store.data.dailyLogs[0].calories, 2150);
+        assertEquals(store.data.dailyLogs[0].protein, 155);
+      });
+
+      it('generates valid JSON export and re-imports successfully', () => {
+        const store = new FitTrackStore();
+        store.data.profile.weight = 74.5;
+        const exported = store.exportJSON();
+        assert(typeof exported === 'string', 'Export must return a string');
+        
+        const freshStore = new FitTrackStore();
+        const importRes = freshStore.importJSON(exported);
+        assertEquals(importRes.success, true);
+        assertEquals(freshStore.data.profile.weight, 74.5);
+      });
+
+      it('generates valid CSV strings with correct headers', () => {
+        const store = new FitTrackStore();
+        store.data.measurements = [
+          { date: '2026-10-28', weight: 74.8, bodyFat: 15.2, waist: 83.5, notes: 'Morning' }
+        ];
+
+        const csv = store.exportCSV('measurements');
+        assert(csv.includes('Date,Weight (kg),Body Fat (%),Waist (cm)'), 'CSV must contain standard headers');
+        assert(csv.includes('"2026-10-28"'), 'CSV must contain data row');
+      });
+    });
+
+    describe('6. Nutrition Totals & Calculation Logic', () => {
+      it('calculates daily totals accurately across multiple food items', () => {
+        const store = new FitTrackStore();
+        store.data.foodEntries = [
+          { id: '1', date: '2026-10-28', calories: 330, protein: 62, carbs: 0, fat: 7 },
+          { id: '2', date: '2026-10-28', calories: 120, protein: 25, carbs: 2, fat: 1 },
+          { id: '3', date: '2026-10-27', calories: 500, protein: 30, carbs: 50, fat: 10 } // Different date
+        ];
+
+        const totals = store.getDailyNutritionTotals('2026-10-28');
+        assertEquals(totals.calories, 450);
+        assertEquals(totals.protein, 87);
+        assertEquals(totals.carbs, 2);
+        assertEquals(totals.fat, 8);
+      });
+    });
+
+    describe('7. Client-Side Cryptographic Vault (AES-256-GCM + PBKDF2)', () => {
+      it('initializes vault configuration and sets master passphrase', async () => {
+        localStorage.removeItem(FitTrackVault.VAULT_CONFIG_KEY);
+        const res = await FitTrackVault.setupMasterPassword('AdminSecret123');
+        assertEquals(res.success, true);
+        assertEquals(FitTrackVault.isVaultConfigured(), true);
+        assertEquals(FitTrackVault.isUnlocked, true);
+      });
+
+      it('encrypts plaintext into ciphertext and decrypts accurately', async () => {
+        const secretPayload = JSON.stringify({ weight: 75.2, notes: 'Private gym session' });
+        const encrypted = await FitTrackVault.encrypt(secretPayload);
+        assertEquals(encrypted.encrypted, true);
+        assert(typeof encrypted.ciphertext === 'string' && encrypted.ciphertext.length > 0);
+
+        const decrypted = await FitTrackVault.decrypt(encrypted);
+        assertEquals(decrypted, secretPayload);
+      });
+
+      it('rejects incorrect master passphrase', async () => {
+        const unlockRes = await FitTrackVault.unlock('WrongPassword!');
+        assertEquals(unlockRes.success, false);
+      });
+
+      it('locks vault session and clears memory key', async () => {
+        FitTrackVault.lock();
+        assertEquals(FitTrackVault.isUnlocked, false);
+        assertEquals(FitTrackVault.sessionKey, null);
+      });
+
+      it('unlocks vault with correct master passphrase', async () => {
+        const unlockRes = await FitTrackVault.unlock('AdminSecret123');
+        assertEquals(unlockRes.success, true);
+        assertEquals(FitTrackVault.isUnlocked, true);
+        assert(FitTrackVault.sessionKey !== null);
+      });
+    });
+
+    describe('8. Authentication & Multi-User RBAC Engine (FitTrackAuth)', () => {
+      it('creates initial administrator account with salted PBKDF2 hash', async () => {
+        localStorage.removeItem(FitTrackAuth.USERS_STORAGE_KEY);
+        sessionStorage.removeItem(FitTrackAuth.SESSION_STORAGE_KEY);
+        
+        const res = await FitTrackAuth.createAdminAccount('admin', 'SecurePass123!');
+        assertEquals(res.success, true);
+        assertEquals(FitTrackAuth.isAuthenticated(), true);
+        assertEquals(FitTrackAuth.isAdmin(), true);
+        assertEquals(FitTrackAuth.hasAdminUser(), true);
+      });
+
+      it('rejects invalid credentials during login', async () => {
+        FitTrackAuth.logout();
+        assertEquals(FitTrackAuth.isAuthenticated(), false);
+        const loginFail = await FitTrackAuth.login('admin', 'WrongPass!');
+        assertEquals(loginFail.success, false);
+      });
+
+      it('authenticates valid admin credentials and creates active session', async () => {
+        const loginOk = await FitTrackAuth.login('admin', 'SecurePass123!');
+        assertEquals(loginOk.success, true);
+        assertEquals(FitTrackAuth.isAuthenticated(), true);
+        assert(FitTrackAuth.getSession().token !== null);
+      });
+
+      it('allows administrator to provision a new user account', async () => {
+        const newU = await FitTrackAuth.createUserByAdmin('client_mike', 'MemberPass456!', 'user');
+        assertEquals(newU.success, true);
+        assertEquals(newU.user.role, 'user');
+        assertEquals(newU.user.username, 'client_mike');
+      });
+
+      it('prevents duplicate usernames', async () => {
+        const dup = await FitTrackAuth.createUserByAdmin('client_mike', 'AnotherPass789!', 'user');
+        assertEquals(dup.success, false);
+      });
+
+      it('prevents deleting the only primary administrator', async () => {
+        const adminUser = FitTrackAuth.getUsers().find(u => u.role === 'admin');
+        assert(adminUser !== undefined, 'Admin user should exist');
+        const delRes = FitTrackAuth.deleteUserByAdmin(adminUser.id);
+        assertEquals(delRes.success, false);
+      });
+    });
+
+    describe('9. Motivational Progress & Goal Completion Tiers (FitTrackMotivation)', () => {
+      it('returns 🌱 tier for 0–24% progress with seedling.gif', () => {
+        const t = FitTrackMotivation.getTier(15);
+        assertEquals(t.emoji, '🌱');
+        assertEquals(t.gif, 'assets/gifs/seedling.gif');
+        assertEquals(t.message, 'Every journey starts with a small step!');
+      });
+
+      it('returns 💪 tier for 25–49% progress with biceps.gif', () => {
+        const t = FitTrackMotivation.getTier(35);
+        assertEquals(t.emoji, '💪');
+        assertEquals(t.gif, 'assets/gifs/biceps.gif');
+        assertEquals(t.message, 'Good start! Keep going!');
+      });
+
+      it('returns 🔥 tier for 50–74% progress with fire.gif', () => {
+        const t = FitTrackMotivation.getTier(60);
+        assertEquals(t.emoji, '🔥');
+        assertEquals(t.gif, 'assets/gifs/fire.gif');
+        assertEquals(t.message, 'You’re making great progress!');
+      });
+
+      it('returns 🚀 tier for 75–99% progress with rocket.gif', () => {
+        const t = FitTrackMotivation.getTier(88);
+        assertEquals(t.emoji, '🚀');
+        assertEquals(t.gif, 'assets/gifs/rocket.gif');
+        assertEquals(t.message, 'Almost there! Keep pushing!');
+      });
+
+      it('returns 🏆 tier with 🎉 celebration and trophy.gif for 100%+ progress', () => {
+        const t = FitTrackMotivation.getTier(100);
+        assertEquals(t.emoji, '🏆');
+        assertEquals(t.gif, 'assets/gifs/trophy.gif');
+        assertEquals(t.celebration, '🎉');
+        assertEquals(t.isComplete, true);
+      });
+
+      it('evaluates optimal calorie compliance (90–105%) as goal achieved', () => {
+        const calOk = FitTrackMotivation.getCalorieTier(2150, 2200);
+        assertEquals(calOk.emoji, '🏆');
+        assertEquals(calOk.isComplete, true);
+      });
+
+      it('cautions on overeating (>105%) without encouraging excess eating', () => {
+        const calOver = FitTrackMotivation.getCalorieTier(2500, 2200);
+        assertEquals(calOver.emoji, '⚖️');
+        assertEquals(calOver.isComplete, false);
+      });
+    });
+
+    describe('10. Adaptive Nutrition Target Advisor (FitTrackAdaptive)', () => {
+      it('calculates evidence-informed protein recommendation (2.0 g/kg for fat loss)', () => {
+        const store = new FitTrackStore();
+        store.data.profile.weight = 80;
+        store.data.profile.goal = 'fat_loss';
+        const evalRes = FitTrackAdaptive.evaluateTargets(store);
+        assertEquals(evalRes.recommendedProtein, 160); // 80 * 2.0
+      });
+
+      it('detects weight plateau over rolling weeks and recommends gentle -100 kcal adjustment', () => {
+        const store = new FitTrackStore();
+        store.data.profile.weight = 80;
+        store.data.goals.dailyCalories = 2200;
+        store.data.dailyLogs = [
+          { date: '2026-10-28', weight: 80.0 }, { date: '2026-10-27', weight: 80.0 }, { date: '2026-10-26', weight: 80.0 },
+          { date: '2026-10-25', weight: 80.0 }, { date: '2026-10-24', weight: 80.0 }, { date: '2026-10-23', weight: 80.0 },
+          { date: '2026-10-22', weight: 80.0 }, { date: '2026-10-21', weight: 80.0 }, { date: '2026-10-20', weight: 80.0 }
+        ];
+        const plateauEval = FitTrackAdaptive.evaluateTargets(store);
+        assertEquals(plateauEval.recommendedCalories, 2100);
+      });
+
+      it('enforces 1500 kcal safe floor limit during calorie cuts', () => {
+        const store = new FitTrackStore();
+        store.data.profile.weight = 80;
+        store.data.goals.dailyCalories = 1550;
+        store.data.dailyLogs = [
+          { date: '2026-10-28', weight: 80.0 }, { date: '2026-10-27', weight: 80.0 }, { date: '2026-10-26', weight: 80.0 },
+          { date: '2026-10-25', weight: 80.0 }, { date: '2026-10-24', weight: 80.0 }, { date: '2026-10-23', weight: 80.0 },
+          { date: '2026-10-22', weight: 80.0 }, { date: '2026-10-21', weight: 80.0 }, { date: '2026-10-20', weight: 80.0 }
+        ];
+        const floorEval = FitTrackAdaptive.evaluateTargets(store);
+        assertEquals(floorEval.recommendedCalories, 1500);
+      });
+    });
+
+    describe('FitTrackSmartMeal - Natural Language Meal AI Parser', () => {
+      it('correctly parses user multi-item lunch example with quantities and units', () => {
+        const text = `lunch\n\nrice - 100g\nchicken 200 gm\n2 boiled egg white\ngravy`;
+        const res = FitTrackSmartMeal.parseMealText(text);
+        assertEquals(res.category, 'lunch');
+        assertEquals(res.items.length, 4);
+        assertEquals(res.items[0].name, 'Cooked Rice');
+        assertEquals(res.items[0].calories, 130);
+        assertEquals(res.items[1].name, 'Chicken Breast (Cooked)');
+        assertEquals(res.items[1].calories, 330);
+        assertEquals(res.items[1].protein, 62);
+        assertEquals(res.items[2].name, 'Boiled Egg White');
+        assertEquals(res.items[2].calories, 34);
+        assertEquals(res.items[2].protein, 7.2);
+        assertEquals(res.items[3].name, 'Curry Gravy');
+        assertEquals(res.items[3].calories, 120);
+        assertEquals(res.totalCalories, 614);
+        assertEquals(res.totalProtein, 74.4);
+      });
+
+      it('correctly parses breakfast items with pieces and slices', () => {
+        const text = `breakfast: 3 whole eggs, 2 slices bread, 1 banana`;
+        const res = FitTrackSmartMeal.parseMealText(text);
+        assertEquals(res.category, 'breakfast');
+        assertEquals(res.items.length, 3);
+        assertEquals(res.items[0].calories, 222);
+        assertEquals(res.items[0].protein, 18.9);
+        assertEquals(res.items[1].calories, 150);
+        assertEquals(res.items[2].calories, 105);
+      });
+
+      it('handles liquid ml units and protein scoops', () => {
+        const text = `snack: 1 scoop whey protein, 250ml milk, 1 tbsp peanut butter`;
+        const res = FitTrackSmartMeal.parseMealText(text);
+        assertEquals(res.category, 'snack');
+        assertEquals(res.items.length, 3);
+        assertEquals(res.items[0].calories, 120);
+        assertEquals(res.items[0].protein, 24);
+        assertEquals(res.items[1].calories, 155);
+        assertEquals(res.items[1].protein, 8);
+        assertEquals(res.items[2].calories, 95);
+      });
+
+      it('correctly parses chicken burger as complete burger dish rather than plain chicken breast', () => {
+        const text = 'chicken burger';
+        const res = FitTrackSmartMeal.parseMealText(text);
+        assertEquals(res.items.length, 1);
+        assertEquals(res.items[0].name, 'Chicken Burger');
+        assertEquals(res.items[0].serving, '1 pc');
+        assertEquals(res.items[0].calories, 440);
+        assertEquals(res.items[0].protein, 26);
+        assertEquals(res.items[0].carbs, 42);
+        assertEquals(res.items[0].fat, 19);
+      });
+
+      it('correctly scales multiple burgers and fast food sides', () => {
+        const text = '2 chicken burgers, 1 french fries';
+        const res = FitTrackSmartMeal.parseMealText(text);
+        assertEquals(res.items.length, 2);
+        assertEquals(res.items[0].name, 'Chicken Burger');
+        assertEquals(res.items[0].serving, '2 pcs');
+        assertEquals(res.items[0].calories, 880);
+        assertEquals(res.items[0].protein, 52);
+        assertEquals(res.items[0].carbs, 84);
+        assertEquals(res.items[1].name, 'French Fries');
+        assertEquals(res.items[1].calories, 312);
+      });
+    });
+
+    describe('12. Dashboard & Daily Log Real-Time Synchronization', () => {
+      it('syncDailyLogNutrition auto-populates daily log from itemized food entries', () => {
+        const store = new FitTrackStore();
+        const date = '2026-10-28';
+        store.data.dailyLogs = [{ date, calories: 981, protein: 80 }];
+        store.data.foodEntries = [
+          { id: 'f1', date, name: 'Cooked Rice', calories: 260, protein: 5, carbs: 56, fat: 1 },
+          { id: 'f2', date, name: 'Chicken Breast', calories: 330, protein: 62, carbs: 0, fat: 7 }
+        ];
+
+        const totals = store.getDailyNutritionTotals(date);
+        assertEquals(totals.calories, 590);
+        assertEquals(totals.protein, 67);
+
+        // App instance mock or test sync logic
+        const app = new FitTrackApp();
+        app.store = store;
+        const res = app.syncDailyLogNutrition(date, true);
+        assertEquals(res.calories, 590);
+        assertEquals(res.protein, 67);
+
+        const updatedLog = store.getDailyLog(date);
+        assertEquals(updatedLog.calories, 590);
+        assertEquals(updatedLog.protein, 67);
+      });
+
+      it('prioritizes itemized food totals over stale daily log numbers', () => {
+        const store = new FitTrackStore();
+        const date = '2026-10-28';
+        // Stale log has 981 kcal and 80g
+        store.data.dailyLogs = [{ date, calories: 981, protein: 80 }];
+        // User logged items totaling 1725 kcal and 157g protein
+        store.data.foodEntries = [
+          { id: 'f1', date, name: 'Chicken', calories: 800, protein: 100 },
+          { id: 'f2', date, name: 'Rice', calories: 925, protein: 57 }
+        ];
+
+        const hasFoodEntries = store.getFoodEntriesForDate(date).length > 0;
+        const nutritionTotals = store.getDailyNutritionTotals(date);
+
+        const caloriesLogged = (hasFoodEntries || nutritionTotals.calories > 0)
+          ? nutritionTotals.calories
+          : (store.getDailyLog(date)?.calories || 0);
+
+        const proteinLogged = (hasFoodEntries || nutritionTotals.protein > 0)
+          ? nutritionTotals.protein
+          : (store.getDailyLog(date)?.protein || 0);
+
+        assertEquals(caloriesLogged, 1725);
+        assertEquals(proteinLogged, 157);
+      });
+
+      it('updateFoodEntry accurately modifies macros and updates daily totals seamlessly', () => {
+        const store = new FitTrackStore();
+        const date = '2026-10-28';
+        store.data.dailyLogs = [{ date, calories: 330, protein: 46, carbs: 0, fat: 7 }];
+        store.data.foodEntries = [
+          { id: 'f-chicken', date, name: 'chicken', serving: '200', calories: 330, protein: 46, carbs: 0, fat: 7 }
+        ];
+
+        // Edit chicken entry: updated to 62g protein and 350 kcal
+        const updated = store.updateFoodEntry({
+          id: 'f-chicken',
+          name: 'Chicken Breast (Cooked)',
+          serving: '200g',
+          calories: 350,
+          protein: 62,
+          carbs: 0,
+          fat: 8
+        });
+
+        assertEquals(updated.calories, 350);
+        assertEquals(updated.protein, 62);
+        assertEquals(updated.name, 'Chicken Breast (Cooked)');
+
+        // Check new totals for date
+        const newTotals = store.getDailyNutritionTotals(date);
+        assertEquals(newTotals.calories, 350);
+        assertEquals(newTotals.protein, 62);
+
+        // App syncs to daily log
+        const app = new FitTrackApp();
+        app.store = store;
+        app.syncDailyLogNutrition(date, true);
+
+        const syncdLog = store.getDailyLog(date);
+        assertEquals(syncdLog.calories, 350);
+        assertEquals(syncdLog.protein, 62);
+      });
+    });
+
+    describe('12. Non-Admin Isolation & First-Time Member Onboarding Wizard', () => {
+      it('switchUser scopes data to user-specific localStorage key for regular members', () => {
+        const store = new FitTrackStore();
+        const adminUser = { id: 'usr_admin_1', username: 'admin', role: 'admin' };
+        store.switchUser(adminUser);
+        assertEquals(store.STORAGE_KEY, 'fittrack_app_data_v1');
+
+        const memberUser = { id: 'usr_sarah_101', username: 'sarah', role: 'user' };
+        store.switchUser(memberUser);
+        assertEquals(store.STORAGE_KEY, 'fittrack_user_data_usr_sarah_101');
+      });
+
+      it('new member template starts with hasOnboarded: false and empty personal logs', () => {
+        const store = new FitTrackStore();
+        const testUserId = 'usr_isolated_test_' + Date.now();
+        localStorage.removeItem('fittrack_user_data_' + testUserId);
+
+        const newMember = { id: testUserId, username: 'alex_test', role: 'user', displayName: 'Alex' };
+        store.switchUser(newMember);
+
+        assertEquals(store.data.profile.hasOnboarded, false);
+        assertEquals(store.data.profile.name, 'Alex');
+        assertEquals(store.data.dailyLogs.length, 0);
+        assertEquals(store.data.foodEntries.length, 0);
+        assertEquals(store.data.measurements.length, 0);
+
+        // Clean up
+        localStorage.removeItem('fittrack_user_data_' + testUserId);
+      });
+
+      it('calculates personalized targets during member onboarding using Mifflin-St Jeor', () => {
+        const weight = 70;
+        const height = 175;
+        const age = 25;
+        const sex = 'male';
+        const activityLevel = '1.375';
+        const goal = 'fat_loss';
+
+        const bmr = FitTrackCalc.calculateBMR(weight, height, age, sex);
+        const tdee = FitTrackCalc.calculateTDEE(bmr, parseFloat(activityLevel));
+        const targets = FitTrackCalc.calculateTargets({ weight, height, age, sex, activityLevel, goal });
+
+        assertEquals(bmr, 1674);
+        assertEquals(tdee, 2302);
+        // Evidence-based protein target for fat loss with muscle retention: 2.0g per kg body weight
+        assertEquals(targets.proteinGrams, 140);
+        // Deficit: ~18% of TDEE (414 kcal), calories ~1888 kcal
+        assert(targets.targetCalories >= 1800 && targets.targetCalories <= 2000, 'Calorie target in optimal cutting range');
+      });
+
+      it('navigate strictly blocks non-admin from accessing admin view and redirects to dashboard', () => {
+        const app = new FitTrackApp();
+        // Mock non-admin member session
+        const origGetSession = FitTrackAuth.getSession;
+        const origIsAdmin = FitTrackAuth.isAdmin;
+        FitTrackAuth.getSession = () => ({ userId: 'usr_member_1', role: 'user', username: 'member' });
+        FitTrackAuth.isAdmin = () => false;
+
+        app.navigate('admin');
+        assertEquals(app.activeView, 'dashboard');
+
+        // Restore
+        FitTrackAuth.getSession = origGetSession;
+        FitTrackAuth.isAdmin = origIsAdmin;
+      });
+
+      it('renderHeaderUserStatus hides all admin navigation elements for regular members', () => {
+        const origGetSession = FitTrackAuth.getSession;
+        const origIsAdmin = FitTrackAuth.isAdmin;
+        FitTrackAuth.getSession = () => ({ userId: 'usr_member_1', role: 'user', username: 'member' });
+        FitTrackAuth.isAdmin = () => false;
+
+        // Create temporary admin and non-admin elements to test
+        const adminEl = document.createElement('div');
+        adminEl.setAttribute('data-view', 'admin');
+        document.body.appendChild(adminEl);
+
+        const stealthBtn = document.createElement('button');
+        stealthBtn.id = 'btn-sidebar-privacy';
+        document.body.appendChild(stealthBtn);
+
+        const app = new FitTrackApp();
+        app.renderHeaderUserStatus();
+
+        assertEquals(adminEl.style.display, 'none');
+        assertEquals(stealthBtn.style.display, 'none');
+
+        // Clean up
+        adminEl.remove();
+        stealthBtn.remove();
+        FitTrackAuth.getSession = origGetSession;
+        FitTrackAuth.isAdmin = origIsAdmin;
+      });
+
+      it('switching between admin and member never deletes or overwrites either user logs', () => {
+        const store = new FitTrackStore();
+        const adminUser = { id: 'usr_admin_main', username: 'admin', role: 'admin' };
+        const memberUser = { id: 'usr_member_persist', username: 'member_jim', role: 'user' };
+
+        // 1. Admin logs food
+        store.switchUser(adminUser);
+        store.data.foodEntries = [
+          { id: 'f-adm-1', date: '2026-10-28', name: 'Alpino Oats', calories: 380, protein: 20 }
+        ];
+        store.data.dailyLogs = [{ date: '2026-10-28', calories: 380, protein: 20 }];
+        store.saveData();
+
+        // 2. Switch to member - member logs different food
+        store.switchUser(memberUser);
+        assertEquals(store.data.foodEntries.length, 0); // Member starts clean
+        store.data.foodEntries = [
+          { id: 'f-mem-1', date: '2026-10-28', name: 'Salmon Salad', calories: 450, protein: 40 }
+        ];
+        store.data.dailyLogs = [{ date: '2026-10-28', calories: 450, protein: 40 }];
+        store.saveData();
+
+        // 3. Switch back to admin - verify admin data is 100% preserved
+        store.switchUser(adminUser);
+        assertEquals(store.data.foodEntries.length, 1);
+        assertEquals(store.data.foodEntries[0].name, 'Alpino Oats');
+        assertEquals(store.data.dailyLogs[0].calories, 380);
+
+        // 4. Switch back to member - verify member data is 100% preserved
+        store.switchUser(memberUser);
+        assertEquals(store.data.foodEntries.length, 1);
+        assertEquals(store.data.foodEntries[0].name, 'Salmon Salad');
+        assertEquals(store.data.dailyLogs[0].calories, 450);
+
+        // Clean up member test key
+        localStorage.removeItem('fittrack_user_data_usr_member_persist');
+        localStorage.removeItem('fittrack_backup_usr_member_persist_latest');
+      });
+
+      it('saveData safeguard prevents accidental empty overwrite of an active database', () => {
+        const store = new FitTrackStore();
+        const testUser = { id: 'usr_safeguard_test', username: 'safeguard', role: 'user' };
+        store.switchUser(testUser);
+
+        // Active database has existing logs
+        store.data.dailyLogs = [{ date: '2026-10-28', calories: 2000, protein: 150 }];
+        store.data.foodEntries = [{ id: 'f-1', date: '2026-10-28', name: 'Steak', calories: 500, protein: 50 }];
+        store.saveData();
+
+        // Now simulate an erroneous empty object being saved
+        const emptyData = {
+          version: 1,
+          profile: { name: 'safeguard' },
+          goals: {},
+          dailyLogs: [],
+          foodEntries: [],
+          workouts: [],
+          measurements: []
+        };
+        store.saveData(emptyData);
+
+        // Verify safeguard preserved the logs!
+        const verified = store.loadData();
+        assertEquals(verified.dailyLogs.length, 1);
+        assertEquals(verified.foodEntries.length, 1);
+        assertEquals(verified.foodEntries[0].name, 'Steak');
+
+        // Clean up
+        localStorage.removeItem('fittrack_user_data_usr_safeguard_test');
+        localStorage.removeItem('fittrack_backup_usr_safeguard_test_latest');
+      });
+
+      it('automatic backup snapshot is created and can restore user data', () => {
+        const store = new FitTrackStore();
+        const testUser = { id: 'usr_backup_test', username: 'backup_user', role: 'user' };
+        store.switchUser(testUser);
+
+        store.data.foodEntries = [{ id: 'f-bk-1', date: '2026-10-28', name: 'Greek Yogurt', calories: 150, protein: 20 }];
+        store.saveData();
+
+        // Check that backup snapshot key exists in localStorage
+        const backupRaw = localStorage.getItem('fittrack_backup_usr_backup_test_latest');
+        assert(backupRaw !== null, 'Backup snapshot must be persisted');
+
+        const parsed = JSON.parse(backupRaw);
+        assertEquals(parsed.data.foodEntries[0].name, 'Greek Yogurt');
+
+        // Test restoring from backup when primary key is missing
+        localStorage.removeItem('fittrack_user_data_usr_backup_test');
+        const restored = store.loadData();
+        assertEquals(restored.foodEntries.length, 1);
+        assertEquals(restored.foodEntries[0].name, 'Greek Yogurt');
+
+        // Clean up
+        localStorage.removeItem('fittrack_user_data_usr_backup_test');
+        localStorage.removeItem('fittrack_backup_usr_backup_test_latest');
+      });
+
+      it('resetData(true) clears old logs and marks profile for fresh onboarding without dummy values', () => {
+        const store = new FitTrackStore();
+        store.data.dailyLogs = [{ date: '2026-10-28', calories: 2500, completed: true }];
+        store.data.foodEntries = [{ id: 'f-1', name: 'Chicken', calories: 300 }];
+        store.data.profile.age = 24;
+        store.data.profile.weight = 75;
+        store.data.profile.hasOnboarded = true;
+        store.saveData();
+
+        // Perform clean user reset
+        const fresh = store.resetData(true);
+        assertEquals(fresh.dailyLogs.length, 0, 'Daily logs must be cleared on reset');
+        assertEquals(fresh.foodEntries.length, 0, 'Food entries must be cleared on reset');
+        assertEquals(fresh.profile.hasOnboarded, false, 'hasOnboarded must be false to prompt fresh onboarding');
+        assertEquals(fresh.profile.age, null, 'Dummy age must be cleared');
+        assertEquals(fresh.profile.weight, null, 'Dummy weight must be cleared');
+      });
+
+      it('profile recalculates personalized calorie, protein, and water targets dynamically', () => {
+        const newProfile = {
+          age: 28,
+          sex: 'male',
+          height: 180,
+          weight: 80,
+          activityLevel: '1.55',
+          goal: 'fat_loss'
+        };
+
+        const targets = FitTrackCalc.calculateTargets(newProfile);
+        const waterTarget = Math.round(newProfile.weight * 35);
+
+        assert(targets.targetCalories > 1500, 'Target calories should be calculated');
+        assertEquals(targets.proteinGrams, 160, '80kg * 2.0g/kg should equal 160g protein');
+        assertEquals(waterTarget, 2800, '80kg * 35ml/kg should equal 2800ml water');
+      });
+    });
+
+    describe('Body Recomposition, AI Food Parsing & Morning Calibration', () => {
+      it('correctly parses colloquial phrases like "i ate 3no of chapatchi" as 3 pieces rather than 3 grams', () => {
+        const parsed = FitTrackSmartMeal.parseMealText('i ate 3no of chapatchi');
+        assertEquals(parsed.items.length, 1, 'Should parse exactly one item');
+        const item = parsed.items[0];
+        assert(item.name.toLowerCase().includes('roti') || item.name.toLowerCase().includes('chapati'), 'Item should be recognized as Roti/Chapati');
+        assert(item.serving.includes('3'), 'Serving should indicate 3 pcs');
+        assertEquals(item.calories, 312, '3 pieces of chapati should be ~312 kcal (104 * 3)');
+        assert(item.protein >= 9, '3 pieces of chapati should have ~9.3g protein');
+      });
+
+      it('calculates body recomposition roadmap metrics accurately based on current and target body fat %', () => {
+        // 75kg at 22% body fat seeking 10% target body fat
+        const recomp = FitTrackCalc.calculateBodyRecomposition(75, 22, 10);
+        assertEquals(recomp.currentWeight, 75, 'Current weight is 75 kg');
+        assertEquals(recomp.currentBF, 22, 'Current BF is 22%');
+        assertEquals(recomp.targetBF, 10, 'Target BF is 10%');
+        assertEquals(recomp.leanBodyMass, 58.5, 'Lean Body Mass = 75 * (1 - 0.22) = 58.5 kg');
+        assertEquals(recomp.targetWeight, 65, 'Target Weight = 58.5 / (1 - 0.10) = 65 kg');
+        assertEquals(recomp.fatMassToLose, 10, 'Fat Mass to Shed = 75 - 65 = 10 kg');
+        assertEquals(recomp.estimatedWeeks, 20, 'Estimated Weeks = 10kg / 0.5kg/wk = 20 weeks');
+      });
+
+      it('morning weight auto-calibrates daily macros, recomp roadmap, and hydration targets seamlessly', () => {
+        const store = new FitTrackStore('test_morning_calib');
+        store.data.profile = {
+          name: 'Tester',
+          age: 25,
+          sex: 'male',
+          height: 175,
+          weight: 78,
+          bodyFat: 20,
+          targetBodyFat: 12,
+          activityLevel: '1.55',
+          goal: 'fat_loss',
+          hasOnboarded: true
+        };
+        store.data.goals = {
+          dailyCalories: 2200,
+          dailyProtein: 156,
+          dailyWaterMl: 2730
+        };
+
+        // Morning weight check-in at 77 kg
+        const newMorningWeight = 77;
+        const recomp = FitTrackCalc.calculateBodyRecomposition(newMorningWeight, store.data.profile.bodyFat, store.data.profile.targetBodyFat);
+        store.data.profile.weight = newMorningWeight;
+        store.data.profile.targetWeight = recomp.targetWeight;
+        store.data.goals.targetWeight = recomp.targetWeight;
+
+        const targets = FitTrackCalc.calculateTargets(store.data.profile);
+        const waterTarget = Math.round(newMorningWeight * 35);
+        store.data.goals.dailyCalories = targets.targetCalories;
+        store.data.goals.dailyProtein = targets.proteinGrams;
+        store.data.goals.dailyWaterMl = waterTarget;
+
+        assertEquals(store.data.profile.weight, 77, 'Profile weight updated to 77 kg');
+        assertEquals(store.data.goals.targetWeight, 70, 'Target weight auto-calibrated to 70 kg');
+        assertEquals(store.data.goals.dailyProtein, 154, 'Protein auto-calibrated to 2.0g/kg (154g)');
+        assertEquals(store.data.goals.dailyWaterMl, 2695, 'Hydration auto-calibrated to 77 * 35 = 2695 ml');
+      });
+
+      it('adaptive morning weight maintains diet calories when weight is reducing as expected', () => {
+        // Given current target of 2297 kcal and previous weight 75 kg, a reduction to 74.5 kg maintains calories
+        const adaptive = FitTrackCalc.calculateAdaptiveMorningTarget(2297, 75.0, 74.5, 'fat_loss', 'male');
+        assertEquals(adaptive.targetCalories, 2297, 'Maintains 2297 kcal diet target when weight is reducing as expected');
+        assertEquals(adaptive.adjustment, 0, 'Zero reduction when weight loss is on track');
+        assert(adaptive.feedback.includes('reducing as expected'), 'Provides encouraging on-track feedback');
+      });
+
+      it('adaptive morning weight tightens target calories when weight spikes above expectation', () => {
+        // Given current target of 2297 kcal and previous weight 75 kg, a morning spike to 75.8 kg tightens calories by -75 kcal
+        const adaptive = FitTrackCalc.calculateAdaptiveMorningTarget(2297, 75.0, 75.8, 'fat_loss', 'male');
+        assertEquals(adaptive.targetCalories, 2222, 'Tightens target from 2297 to 2222 kcal (-75 kcal) instead of increasing food');
+        assertEquals(adaptive.adjustment, -75, 'Calorie adjustment is -75 kcal');
+        assert(adaptive.feedback.includes('tightened by -75 kcal'), 'Provides corrective tightening feedback');
+      });
+
+      it('adaptive morning weight enforces safe calorie floor during successive adjustments', () => {
+        // Extremely low calorie target cannot drop below 1500 kcal floor for male
+        const adaptive = FitTrackCalc.calculateAdaptiveMorningTarget(1520, 75.0, 76.0, 'fat_loss', 'male');
+        assertEquals(adaptive.targetCalories, 1500, 'Calorie target never drops below safe floor of 1500 kcal');
+      });
+
+      it('training status accurately reports 0 of 6 incomplete sessions without premature celebration', () => {
+        const tier = FitTrackMotivation.getWorkoutTier(false, false, 0, 6);
+        assertEquals(tier.tierClass, 'tier-0', 'Tier is tier-0 for 0 completed sessions');
+        assertEquals(tier.isComplete, false, 'isComplete is false');
+        assert(tier.message.includes('0 of 6 completed'), 'Accurately displays 0 of 6 completed message');
+        assert(!tier.message.includes('Goal achieved'), 'Never reports goal achieved when 0 sessions done');
+      });
+
+      it('training status rewards today workout completion and weekly goal achievement', () => {
+        const todayDoneTier = FitTrackMotivation.getWorkoutTier(true, false, 1, 6);
+        assertEquals(todayDoneTier.tierClass, 'tier-75', 'Tier is tier-75 when workout completed today');
+        assertEquals(todayDoneTier.isComplete, true, 'isComplete is true');
+        assert(todayDoneTier.message.includes("Today's workout completed"), 'Mentions today workout completed');
+
+        const weeklyGoalTier = FitTrackMotivation.getWorkoutTier(true, false, 6, 6);
+        assertEquals(weeklyGoalTier.tierClass, 'tier-100', 'Tier is tier-100 when weekly target reached');
+        assert(weeklyGoalTier.message.includes('Weekly goal crushed'), 'Mentions weekly goal crushed');
+      });
+
+      it('adaptive nutrition engine auto-sync calibrates targets accurately for active member profile', () => {
+        const app = new FitTrackApp();
+        app.store.data.profile = {
+          name: 'CalibTest',
+          weight: 75.8,
+          height: 169,
+          age: 24,
+          sex: 'male',
+          activityLevel: '1.6',
+          goal: 'fat_loss',
+          bodyFat: 22,
+          targetBodyFat: 10
+        };
+        app.store.data.goals = {
+          dailyCalories: 2310, // stale inflated value
+          dailyProtein: 152
+        };
+
+        app.handleRecalibrateAdaptiveTargets(false);
+
+        // Evidence-based deficit target: BMR ~1700, TDEE ~2719, ~489 deficit -> ~2230 kcal
+        assert(app.store.data.goals.dailyCalories <= 2235, 'Calorie target calibrated down from 2310 to optimal evidence-based cut');
+        assertEquals(app.store.data.goals.dailyProtein, 152, 'Protein locked at 2.0g/kg (152g)');
+        assertEquals(app.store.data.goals.dailyWaterMl, 2653, 'Water target calibrated to 75.8 * 35 = 2653 ml');
+      });
+
+      it('preserves manual daily log entries for yesterday without overwriting with food totals', () => {
+        const app = new FitTrackApp();
+        const yesterday = '2026-10-29';
+        // Suppose food entries for yesterday totaled 1162 kcal
+        app.store.data.foodEntries = [
+          { id: 'f1', date: yesterday, name: 'Sample Item', calories: 1162, protein: 75 }
+        ];
+        // User manually updated yesterday\'s daily log to 2150 kcal
+        app.store.saveDailyLog({
+          date: yesterday,
+          calories: 2150,
+          protein: 160,
+          carbs: 220,
+          fat: 65,
+          completed: true
+        });
+
+        // Set up DOM inputs for the daily log form
+        const dummyForm = document.createElement('div');
+        dummyForm.innerHTML = `
+          <input type="checkbox" id="log-completed" />
+          <input type="number" id="log-weight" />
+          <input type="number" id="log-bf" />
+          <input type="number" id="log-calories" />
+          <input type="number" id="log-protein" />
+          <input type="number" id="log-carbs" />
+          <input type="number" id="log-fat" />
+          <select id="log-workout-status"><option value="workout">Workout</option></select>
+          <input type="number" id="log-water" />
+          <input type="number" id="log-sleep" />
+          <textarea id="log-notes"></textarea>
+          <div id="log-form-notice"></div>
+        `;
+        document.body.appendChild(dummyForm);
+
+        try {
+          app.loadDailyLogIntoForm(yesterday);
+          const calInput = document.getElementById('log-calories');
+          const proInput = document.getElementById('log-protein');
+          assertEquals(parseFloat(calInput.value), 2150, 'Preserves user manual 2150 kcal instead of reverting to 1162');
+          assertEquals(parseFloat(proInput.value), 160, 'Preserves user manual 160g protein');
+        } finally {
+          document.body.removeChild(dummyForm);
+        }
+      });
+
+      it('nutrition trend chart accurately displays yesterday updated calories in 7-day window', () => {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = FitTrackCalc.formatDateLocal(yesterday);
+
+        const store = new FitTrackStore();
+        store.data.dailyLogs = [
+          { date: yesterdayStr, calories: 2150, protein: 160 }
+        ];
+
+        // Ensure Chart mock exists if Chart.js is not loaded in unit test environment
+        const hadChart = typeof window.Chart !== 'undefined';
+        if (!hadChart) {
+          window.Chart = function(ctx, cfg) {
+            this.ctx = ctx;
+            this.config = cfg;
+            this.data = cfg.data;
+            this.destroy = function() {};
+          };
+        }
+
+        const dummyCanvas = document.createElement('canvas');
+        dummyCanvas.id = 'test-dummy-nutrition-chart';
+        dummyCanvas.getContext = () => ({});
+        document.body.appendChild(dummyCanvas);
+
+        try {
+          FitTrackCharts.renderNutritionTrendChart('test-dummy-nutrition-chart', store.data.dailyLogs, 2228, 152, 7, store);
+          const chartInstance = FitTrackCharts.instances['test-dummy-nutrition-chart'];
+          assert(chartInstance, 'Chart instance successfully rendered');
+          const labels = chartInstance.data.labels;
+          const yesterdayLabel = yesterdayStr.slice(5);
+          const yIdx = labels.indexOf(yesterdayLabel);
+          assert(yIdx !== -1, 'Yesterday is included in the 7-day chronological labels');
+          assertEquals(chartInstance.data.datasets[0].data[yIdx], 2150, 'Yesterday bar displays updated 2150 kcal value');
+        } finally {
+          FitTrackCharts.destroyChart('test-dummy-nutrition-chart');
+          if (dummyCanvas.parentNode) dummyCanvas.parentNode.removeChild(dummyCanvas);
+          if (!hadChart) delete window.Chart;
+        }
+      });
+
+      it('accurately verifies all physiological calculations for 75kg and 75.8kg profile', () => {
+        // Profile 1: 75 kg, 169 cm, 24yo, Male, 1.6 Activity (Heavy Lifting)
+        const t1 = FitTrackCalc.calculateTargets({
+          weight: 75,
+          height: 169,
+          age: 24,
+          sex: 'male',
+          activityLevel: '1.6',
+          goal: 'fat_loss',
+          bodyFat: 22,
+          targetBodyFat: 10
+        });
+        assertEquals(t1.bmr, 1691, 'Mifflin-St Jeor BMR for 75kg male is 1691 kcal');
+        assertEquals(t1.tdee, 2706, 'TDEE at 1.6x is 2706 kcal');
+        assertEquals(t1.deficitKcal, 487, '18% moderate fat loss deficit is 487 kcal');
+        assertEquals(t1.targetCalories, 2219, 'Target calories for fat loss cut is 2219 kcal');
+        assertEquals(t1.proteinGrams, 150, 'Protein target is 2.0 g/kg (150g)');
+        assertEquals(t1.waterTarget, 2625, 'Hydration target is 75 * 35 = 2625 ml');
+        assertEquals(t1.recomp.targetWeight, 65, 'Target weight at 10% BF is 65.0 kg');
+        assertEquals(t1.recomp.fatMassToLose, 10, 'Fat to lose is 10.0 kg');
+
+        // Profile 2: 75.8 kg morning weigh-in
+        const t2 = FitTrackCalc.calculateTargets({
+          weight: 75.8,
+          height: 169,
+          age: 24,
+          sex: 'male',
+          activityLevel: '1.6',
+          goal: 'fat_loss',
+          bodyFat: 22,
+          targetBodyFat: 10
+        });
+        assertEquals(t2.bmr, 1699, 'Mifflin-St Jeor BMR for 75.8kg male is 1699 kcal');
+        assertEquals(t2.tdee, 2718, 'TDEE at 1.6x is 2718 kcal');
+        assertEquals(t2.deficitKcal, 489, '18% deficit is 489 kcal');
+        assertEquals(t2.targetCalories, 2229, 'Target calories is 2229 kcal');
+        assertEquals(t2.proteinGrams, 152, 'Protein target is 152g (2.0 g/kg)');
+        assertEquals(t2.waterTarget, 2653, 'Water target is 75.8 * 35 = 2653 ml');
+        assertEquals(t2.recomp.targetWeight, 65.7, 'Target weight at 10% BF is 65.7 kg');
+        assertEquals(t2.recomp.fatMassToLose, 10.1, 'Fat to lose is 10.1 kg');
+      });
+    });
+
+    // Run and render results sequentially in exact declaration order
+    async function runAllTests() {
+      const container = document.getElementById('test-results-container');
+      container.innerHTML = '';
+      let totalTests = 0;
+      let passedTests = 0;
+      let failedTests = 0;
+
+      for (const suite of suites) {
+        const suiteEl = document.createElement('div');
+        suiteEl.className = 'test-suite';
+
+        let suiteHtml = `<div class="suite-title"><span>${suite.name}</span></div>`;
+
+        for (let idx = 0; idx < suite.tests.length; idx++) {
+          const t = suite.tests[idx];
+          totalTests++;
+          let statusHtml = '';
+
+          try {
+            await t.fn();
+            passedTests++;
+            statusHtml = `<span class="test-status status-ok">PASS ✓</span>`;
+          } catch (err) {
+            failedTests++;
+            statusHtml = `
+              <div>
+                <span class="test-status status-err">FAIL ✕</span>
+                <div class="test-error-msg">${err.message}</div>
+              </div>
+            `;
+          }
+
+          suiteHtml += `
+            <div class="test-case">
+              <span>${t.name}</span>
+              <div>${statusHtml}</div>
+            </div>
+          `;
+        }
+
+        suiteEl.innerHTML = suiteHtml;
+        container.appendChild(suiteEl);
+      }
+
+      const pill = document.getElementById('summary-pill');
+      if (failedTests === 0) {
+        pill.className = 'test-summary-badge badge-pass';
+        pill.innerHTML = `✓ ALL ${passedTests} TESTS PASSED (0 Failures)`;
+      } else {
+        pill.className = 'test-summary-badge badge-fail';
+        pill.innerHTML = `✕ ${failedTests} of ${totalTests} TESTS FAILED`;
+      }
+      window.__TEST_RESULTS__ = { total: totalTests, passed: passedTests, failed: failedTests, success: failedTests === 0 };
+    }
+
+    // Auto-run on load
+    window.addEventListener('DOMContentLoaded', () => {
+      runAllTests();
+    });
+  </script>
+</body>
+</html>
+

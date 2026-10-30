@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FitTrack - Personal Fitness & Strength Tracker</title>
+  <meta name="description" content="Personal fitness, nutrition, body composition, and strength PR tracker designed for muscle retention and fat loss.">
+  <meta name="theme-color" content="#121316">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <link rel="stylesheet" href="styles.css?v=2.6.0">
+  <!-- Chart.js 4.4.1 for interactive performance and nutrition charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="fittrack-body">
+  <!-- Mobile Header -->
+  <header class="mobile-header" id="mobile-header">
+    <button type="button" class="btn-icon mobile-menu-btn" id="btn-mobile-menu" aria-label="Open navigation menu">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <div class="brand-logo">
+      <span class="brand-icon">⚡</span>
+      <span class="brand-text">Fit<span class="brand-accent">Track</span></span>
+    </div>
+    <div class="mobile-header-status">
+      <button type="button" class="btn-icon header-privacy-btn btn-toggle-stealth" id="btn-header-privacy" title="Toggle Stealth Camo Mode (blurs numbers)">
+        🕶️
+      </button>
+      <button type="button" class="btn-icon header-lock-btn" id="btn-header-lock" title="Lock Admin Vault" style="display: none;">
+        🔒
+      </button>
+      <span class="badge-streak-header" id="header-streak-badge">
+        <span class="streak-icon">🔥</span> <span class="streak-count">0</span>
+      </span>
+    </div>
+  </header>
+
+  <!-- Mobile Drawer Overlay -->
+  <div class="mobile-drawer" id="mobile-drawer">
+    <div class="mobile-drawer-content">
+      <div class="mobile-drawer-header">
+        <div class="brand-logo">
+          <span class="brand-icon">⚡</span>
+          <span class="brand-text">Fit<span class="brand-accent">Track</span></span>
+        </div>
+        <button type="button" class="btn-icon" id="btn-close-drawer" aria-label="Close navigation menu">✕</button>
+      </div>
+      <nav class="mobile-drawer-nav">
+        <a href="#dashboard" class="mobile-nav-link active" data-view="dashboard">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="#daily-log" class="mobile-nav-link" data-view="daily-log">
+          <span class="nav-icon">📝</span> Daily Log & Streaks
+        </a>
+        <a href="#nutrition" class="mobile-nav-link" data-view="nutrition">
+          <span class="nav-icon">🥗</span> Nutrition
+        </a>
+        <a href="#progress" class="mobile-nav-link" data-view="progress">
+          <span class="nav-icon">📈</span> Progress History
+        </a>
+        <a href="#goals" class="mobile-nav-link" data-view="goals">
+          <span class="nav-icon">🎯</span> Goals & Review
+        </a>
+        <a href="#settings" class="mobile-nav-link" data-view="settings">
+          <span class="nav-icon">⚙️</span> Settings & Backup
+        </a>
+        <a href="#admin" class="mobile-nav-link" data-view="admin">
+          <span class="nav-icon">🛡️</span> Admin & Security
+        </a>
+      </nav>
+      <div class="mobile-drawer-footer">
+        <button type="button" class="btn btn-danger btn-sm w-full mb-2 btn-do-logout" id="btn-drawer-logout">
+          🚪 Log Out
+        </button>
+        <span class="storage-indicator-pill">● Local Browser Storage</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-layout">
+    <!-- Desktop Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-logo">
+          <span class="brand-icon">⚡</span>
+          <span class="brand-name">Fit<span class="brand-accent">Track</span></span>
+        </div>
+        <div class="brand-sub">Personal Fitness Architecture</div>
+      </div>
+
+      <div class="user-status-card">
+        <div class="user-avatar" id="sidebar-user-avatar">👤</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-user-name">FitTrack Member</div>
+          <div class="user-pill" id="header-profile-pill">Personalized Goals</div>
+        </div>
+      </div>
+
+      <div class="sidebar-streak-card">
+        <div class="streak-flame-icon">🔥</div>
+        <div class="streak-text-wrap">
+          <div class="streak-label">Daily Logging Streak</div>
+          <div class="streak-value"><span id="sidebar-streak-count">0</span> Days Active</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" id="sidebar-nav">
+        <div class="nav-item-wrapper" draggable="true" data-view="dashboard">
+          <span class="drag-handle" title="Drag to rearrange">⠿</span>
+          <a href="#dashboard" class="nav-link active" data-view="dashboard">
+            <span class="nav-icon">📊</span> <span class="nav-text">Dashboard</span>
+          </a>
+        </div>
+        <div class="nav-item-wrapper" draggable="true" data-view="daily-log">
+          <span class="drag-handle" title="Drag to rearrange">⠿</span>
+          <a href="#daily-log" class="nav-link" data-view="daily-log">
+            <span class="nav-icon">📝</span> <span class="nav-text">Daily Log</span>
+          </a>
+        </div>
+        <div class="nav-item-wrapper" draggable="true" data-view="nutrition">
+          <span class="drag-handle" title="Drag to rearrange">⠿</span>
+          <a href="#nutrition" class="nav-link" data-view="nutrition">
+            <span class="nav-icon">🥗</span> <span class="nav-text">Nutrition</span>
+          </a>
+        </div>
+        <div class="nav-item-wrapper" draggable="true" data-view="progress">
+          <span class="drag-handle" title="Drag to rearrange">⠿</span>
+          <a href="#progress" class="nav-link" data-view="progress">
+            <span class="nav-icon">📈</span> <span class="nav-text">Progress History</span>
+          </a>
+        </div>
+        <div class="nav-item-wrapper" draggable="true" data-view="goals">
+          <span class="drag-handle" title="Drag to rearrange">⠿</span>
+          <a href="#goals" class="nav-link" data-view="goals">
+            <span class="nav-icon">🎯</span> <span class="nav-text">Goals & Review</span>
+          </a>
+        </div>
+        <div class="nav-item-wrapper" draggable="true" data-view="settings">
+          <span class="drag-handle" title="Drag to rearrange">⠿</span>
+          <a href="#settings" class="nav-link" data-view="settings">
+            <span class="nav-icon">⚙️</span> <span class="nav-text">Settings & Backup</span>
+          </a>
+        </div>
+        <div class="nav-item-wrapper" draggable="true" data-view="admin">
+          <span class="drag-handle" title="Drag to rearrange">⠿</span>
+          <a href="#admin" class="nav-link" data-view="admin">
+            <span class="nav-icon">🛡️</span> <span class="nav-text">Admin & Security</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button type="button" class="btn btn-outline btn-sm w-full mb-2 btn-do-logout" id="btn-sidebar-logout">
+          🚪 Log Out
+        </button>
+        <button type="button" class="btn btn-outline btn-sm w-full mb-2 btn-toggle-stealth" id="btn-sidebar-privacy">
+          🕶️ Stealth Mode
+        </button>
+        <div class="storage-badge" title="Data stored privately in browser with AES-256-GCM encryption">
+          <span class="status-dot"></span> Zero-Knowledge Vault
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content" id="main-content" role="main">
+
+      <!-- ================= 1. DASHBOARD VIEW ================= -->
+      <section id="view-dashboard" class="view-section active">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Personal Fitness Dashboard</h1>
+            <p class="view-subtitle">High-protein fat loss with strength retention and progressive overload.</p>
+          </div>
+          <div class="header-action-group">
+            <button type="button" class="btn btn-primary" id="btn-quick-log-today">
+              <span class="btn-icon">⚡</span> Complete Today's Log
+            </button>
+          </div>
+        </div>
+
+        <!-- Metric KPI Cards -->
+        <div class="kpi-grid">
+          <!-- Today's Overall Progress Card with Adaptive Nutrition Engine on top -->
+          <div class="kpi-card kpi-card-highlight" id="dash-progress-card">
+            <div class="adaptive-mini-header" id="adaptive-mini-header" role="button" tabindex="0" title="Click to view Adaptive Nutrition Engine recommendations & auto-calibrate targets">
+              <span class="adaptive-mini-badge">
+                <span class="adaptive-mini-pulse"></span>
+                🤖 Adaptive Nutrition Engine
+              </span>
+              <span class="adaptive-mini-status" id="adaptive-snippet-status">Auto-Calibrated</span>
+            </div>
+
+            <div class="kpi-top">
+              <span class="kpi-label">Today's Progress</span>
+              <span class="kpi-icon" id="dash-progress-col-icon">
+                <img src="assets/gifs/seedling.gif" alt="🌱" class="kpi-emoji-gif" />
+              </span>
+            </div>
+            <div class="kpi-main">
+              <span class="kpi-value text-accent-lime" id="dash-col-overall-percent">0%</span>
+              <span class="kpi-sub" id="dash-col-overall-status">Daily Target</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill fill-lime" id="dash-col-overall-bar" style="width: 0%"></div>
+            </div>
+            <div class="kpi-footer" id="dash-col-overall-motivation">
+              <span class="badge-tier tier-0"><img src="assets/gifs/seedling.gif" class="badge-tier-gif" alt="🌱" /> <span>Starting out</span></span>
+            </div>
+            <div class="adaptive-mini-targets" id="adaptive-auto-targets-text">
+              <span>🎯 Auto-Set Targets: <strong id="adaptive-cal-target-display">2219 kcal</strong> · <strong id="adaptive-pro-target-display">150g pro</strong></span>
+              <button type="button" class="btn-recalibrate-pill" id="btn-quick-recalibrate" title="Instant Auto-Recalibration">⚡ Auto-Sync</button>
+            </div>
+            <div id="dash-celebration-container" class="celebration-badge-container mt-2" style="display: none;">
+              <span class="celebration-badge"><img src="assets/gifs/party_popper.gif" class="badge-tier-gif" alt="🎉" /> Goals Crushed! 🏆</span>
+            </div>
+          </div>
+
+          <!-- Weight Card with Daily Morning Weight Quick-Log & Auto-Calibrate -->
+          <div class="kpi-card kpi-card-weight" id="dash-weight-kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Current Body Weight</span>
+              <span class="kpi-icon" id="dash-weight-icon">
+                <img src="assets/gifs/scale.gif" alt="⚖️" class="kpi-emoji-gif" />
+              </span>
+            </div>
+            <div class="kpi-main">
+              <span class="kpi-value text-accent-blue" id="dash-current-weight">75.0 kg</span>
+              <span class="metric-delta neutral" id="dash-weight-change">--</span>
+            </div>
+            <div class="kpi-footer">
+              <span>Goal: <strong id="dash-target-weight-display">-- kg</strong> (<span id="dash-target-bf-display">10% BF</span>) · BF: <strong id="dash-current-bf">Not measured</strong></span>
+            </div>
+
+            <!-- Interactive Morning Weight Quick Logger & Auto-Calibrator -->
+            <form id="form-dash-morning-weight" class="dash-weight-quick-form" style="margin-top: 0.65rem; padding-top: 0.5rem; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+              <div class="dash-weight-input-group" style="display: flex; gap: 0.4rem; align-items: center;">
+                <input type="number" id="dash-morning-weight-input" step="any" min="30" max="300" placeholder="Morning kg" class="input-dash-weight" required aria-label="Morning body weight in kg" style="background: rgba(0, 0, 0, 0.45); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: var(--radius-sm); padding: 0.35rem 0.6rem; font-size: 0.85rem; width: 100%;">
+                <button type="button" id="btn-dash-log-weight" class="btn-dash-weight-submit" title="Log morning weight and auto-calibrate today's macros" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; white-space: nowrap; background: rgba(34, 197, 94, 0.2); border: 1px solid var(--accent-lime); color: var(--accent-lime); font-size: 0.78rem; font-weight: 700; padding: 0.35rem 0.65rem; border-radius: var(--radius-sm); cursor: pointer;">
+                  <span>⚡ Calibrate</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Calories KPI -->
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Today's Calories</span>
+              <span class="kpi-icon" id="dash-cal-icon">
+                <img src="assets/gifs/fire.gif" alt="🔥" class="kpi-emoji-gif" />
+              </span>
+            </div>
+            <div class="kpi-main">
+              <span class="kpi-value text-accent-orange" id="dash-calories">0 kcal</span>
+              <span class="kpi-sub" id="dash-cal-target">Target: 2200 kcal</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill fill-orange" id="dash-cal-bar" style="width: 0%"></div>
+            </div>
+            <div class="kpi-footer">
+              <span id="dash-cal-remaining" class="text-sm">2200 kcal remaining</span>
+            </div>
+            <div class="mt-2" id="dash-cal-motivation">
+              <span class="badge-tier tier-0"><img src="assets/gifs/seedling.gif" class="badge-tier-gif" alt="🌱" /> <span>Starting out</span></span>
+            </div>
+          </div>
+
+          <!-- Protein KPI -->
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Today's Protein</span>
+              <span class="kpi-icon" id="dash-pro-icon">
+                <img src="assets/gifs/biceps.gif" alt="💪" class="kpi-emoji-gif" />
+              </span>
+            </div>
+            <div class="kpi-main">
+              <span class="kpi-value text-accent-green" id="dash-protein">0g</span>
+              <span class="kpi-sub" id="dash-pro-target">Target: 150g</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill fill-green" id="dash-pro-bar" style="width: 0%"></div>
+            </div>
+            <div class="kpi-footer">
+              <span id="dash-pro-remaining" class="text-sm">150g remaining</span>
+            </div>
+            <div class="mt-2" id="dash-pro-motivation">
+              <span class="badge-tier tier-0"><img src="assets/gifs/seedling.gif" class="badge-tier-gif" alt="🌱" /> <span>Starting out</span></span>
+            </div>
+          </div>
+
+          <!-- Water Intake KPI -->
+          <div class="kpi-card" id="kpi-card-hydration">
+            <div class="kpi-top">
+              <span class="kpi-label">Today's Hydration</span>
+              <span class="kpi-icon" id="dash-water-icon">
+                <img src="assets/gifs/droplet.gif" alt="💧" class="kpi-emoji-gif" />
+              </span>
+            </div>
+            <div class="kpi-main">
+              <span class="kpi-value text-accent-cyan" id="dash-water">0 ml</span>
+              <span class="kpi-sub" id="dash-water-target">Target: 2500 ml</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill fill-blue" id="dash-water-bar" style="width: 0%"></div>
+            </div>
+            <div class="kpi-footer">
+              <span id="dash-water-remaining" class="text-sm">2500 ml remaining</span>
+            </div>
+            <div class="mt-2" id="dash-water-motivation">
+              <span class="badge-tier tier-0"><img src="assets/gifs/seedling.gif" class="badge-tier-gif" alt="🌱" /> <span>Starting out</span></span>
+            </div>
+            <!-- Quick Hydration Value Adjustment Inside Card -->
+            <div class="hydration-quick-stepper" id="dash-hydration-stepper">
+              <button type="button" class="btn-quick-water" data-delta="-250" title="Minus 250ml">-250ml</button>
+              <button type="button" class="btn-quick-water highlight" data-delta="250" title="Add glass (+250ml)">+250ml</button>
+              <button type="button" class="btn-quick-water highlight" data-delta="500" title="Add bottle (+500ml)">+500ml</button>
+            </div>
+          </div>
+
+          <!-- Streak & Today Status -->
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Fitness Streak</span>
+              <span class="kpi-icon" id="dash-streak-icon">
+                <img src="assets/gifs/trophy.gif" alt="🏆" class="kpi-emoji-gif" />
+              </span>
+            </div>
+            <div class="kpi-main">
+              <span class="kpi-value text-accent-lime" id="dash-cur-streak">0 days</span>
+              <span class="kpi-sub" id="dash-longest-streak">Best: 0 days</span>
+            </div>
+            <div class="kpi-footer" id="dash-today-status">
+              <span class="status-badge warning"><img src="assets/gifs/hourglass.gif" class="status-badge-gif" alt="⏳" /> Today Incomplete</span>
+            </div>
+          </div>
+
+          <!-- Weekly Workout Target -->
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Training Status</span>
+              <span class="kpi-icon" id="dash-workout-icon">
+                <img src="assets/gifs/zap.gif" alt="⚡" class="kpi-emoji-gif" />
+              </span>
+            </div>
+            <div class="kpi-main">
+              <span class="kpi-value text-accent-purple" id="dash-weekly-workouts">0 of 6 completed</span>
+              <span class="kpi-sub">Target: 6 sessions/week</span>
+            </div>
+            <div class="kpi-footer" id="dash-workout-motivation">
+              <span class="badge-tier tier-25"><img src="assets/gifs/biceps.gif" class="badge-tier-gif" alt="💪" /> <span>Ready to train today</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Body Recomposition & Achievable Goal Card -->
+        <div class="card mb-4 recomp-roadmap-card" id="dash-recomp-card" style="display: none;">
+          <div class="recomp-header">
+            <div class="recomp-title-group">
+              <span class="recomp-badge">🎯 Personalized Body Recomposition Roadmap</span>
+              <h3 class="recomp-title">Target: <span id="recomp-target-tier-name">10% Beach Lean & Six-Pack Abs</span></h3>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline btn-open-bf-modal" id="btn-open-bf-modal">
+              📷 View Torso Comparison Chart
+            </button>
+          </div>
+          <div class="recomp-stats-grid">
+            <div class="recomp-stat">
+              <span class="recomp-stat-label">Current State</span>
+              <span class="recomp-stat-val text-accent-blue" id="recomp-current-stat">-- kg (--% BF)</span>
+            </div>
+            <div class="recomp-stat">
+              <span class="recomp-stat-label">Achievable Goal</span>
+              <span class="recomp-stat-val text-accent-green" id="recomp-target-stat">-- kg (10% BF)</span>
+            </div>
+            <div class="recomp-stat">
+              <span class="recomp-stat-label">Fat to Shed</span>
+              <span class="recomp-stat-val text-accent-orange" id="recomp-fat-to-lose">-- kg fat</span>
+            </div>
+            <div class="recomp-stat">
+              <span class="recomp-stat-label">Preserved Lean Mass</span>
+              <span class="recomp-stat-val text-accent-purple" id="recomp-lean-mass">-- kg LBM</span>
+            </div>
+            <div class="recomp-stat">
+              <span class="recomp-stat-label">Est. Timeline</span>
+              <span class="recomp-stat-val text-accent-cyan" id="recomp-timeline">~16 weeks (@ 0.5-0.6 kg/wk)</span>
+            </div>
+          </div>
+          <div class="recomp-progress-bar-wrap">
+            <div class="recomp-progress-bar-labels">
+              <span>Progress Toward Target Body Fat %</span>
+              <span id="recomp-progress-pct">0%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill progress-fill-lime" id="recomp-progress-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="charts-grid mt-4">
+          <div class="chart-card">
+            <div class="chart-header">
+              <h3 class="chart-title">Body Weight & Moving Trend</h3>
+              <span class="chart-badge">7-day rolling average</span>
+            </div>
+            <div class="chart-canvas-container">
+              <canvas id="chart-dash-weight"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-header">
+              <h3 class="chart-title">Daily Calorie Intake vs Target</h3>
+              <span class="chart-badge">Deficit tracking</span>
+            </div>
+            <div class="chart-canvas-container">
+              <canvas id="chart-dash-nutrition"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 2. DAILY LOG VIEW ================= -->
+      <section id="view-daily-log" class="view-section" hidden>
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Daily Fitness Log</h1>
+            <p class="view-subtitle">Streak Rule: A day counts as complete when you finish and save your daily fitness log.</p>
+          </div>
+          <div class="header-action-group">
+            <span class="autosave-pill" id="autosave-daily-log-badge">🟢 Auto-save active</span>
+          </div>
+        </div>
+
+        <div class="daily-log-layout">
+          <!-- Left: The Form -->
+          <div class="card form-card">
+            <form id="form-daily-log">
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label for="log-date" class="form-label">Calendar Date</label>
+                  <input type="date" id="log-date" class="input-text" required>
+                </div>
+                <div class="form-group flex-1">
+                  <label for="log-workout-status" class="form-label">Training Day Status</label>
+                  <select id="log-workout-status" class="input-select">
+                    <option value="workout">🏋️ Workout Completed</option>
+                    <option value="rest">🧘 Rest Day / Active Recovery (Counts for streak!)</option>
+                    <option value="skipped">⏸️ Skipped Training</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Streak Completion Checkbox -->
+              <div class="streak-complete-box">
+                <label class="checkbox-label streak-checkbox-label">
+                  <input type="checkbox" id="log-completed" class="custom-checkbox">
+                  <div>
+                    <strong>Mark Day as Complete ✓</strong>
+                    <div class="text-sm text-muted">Checking this confirms today's tracking is done and builds your consecutive streak.</div>
+                  </div>
+                </label>
+              </div>
+
+              <div id="log-form-notice" class="mb-3"></div>
+
+              <div class="form-section-title">Body Composition (Optional)</div>
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label for="log-weight" class="form-label">Morning Weight (kg)</label>
+                  <input type="number" id="log-weight" step="any" min="30" max="300" class="input-number" placeholder="e.g. 74.8">
+                </div>
+                <div class="form-group flex-1">
+                  <label for="log-bf" class="form-label">Body Fat % (Optional)</label>
+                  <input type="number" id="log-bf" step="any" min="3" max="60" class="input-number" placeholder="e.g. 15.5">
+                </div>
+              </div>
+
+              <div class="section-title-with-btn">
+                <div class="form-section-title">Nutrition Consumed</div>
+                <button type="button" class="btn-sm btn-outline" id="btn-sync-nutrition-to-log" title="Pull latest calorie and protein sums from food entries">
+                  🔄 Sync from Nutrition Entries
+                </button>
+              </div>
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label for="log-calories" class="form-label">Total Calories (kcal) *</label>
+                  <input type="number" id="log-calories" min="0" step="any" class="input-number" placeholder="e.g. 2150" required>
+                </div>
+                <div class="form-group flex-1">
+                  <label for="log-protein" class="form-label">Protein (g) *</label>
+                  <input type="number" id="log-protein" min="0" step="any" class="input-number" placeholder="e.g. 155" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label for="log-carbs" class="form-label">Carbohydrates (g)</label>
+                  <input type="number" id="log-carbs" min="0" step="any" class="input-number" placeholder="e.g. 220">
+                </div>
+                <div class="form-group flex-1">
+                  <label for="log-fat" class="form-label">Dietary Fat (g)</label>
+                  <input type="number" id="log-fat" min="0" step="any" class="input-number" placeholder="e.g. 60">
+                </div>
+              </div>
+
+              <div class="form-section-title">Recovery & Well-being (Optional)</div>
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label for="log-water" class="form-label">Water Intake (ml)</label>
+                  <div class="input-with-addons">
+                    <input type="number" id="log-water" min="0" step="any" class="input-number" placeholder="e.g. 3000">
+                    <button type="button" class="btn-sm btn-outline btn-add-water" data-amount="250">+250ml</button>
+                    <button type="button" class="btn-sm btn-outline btn-add-water" data-amount="500">+500ml</button>
+                  </div>
+                </div>
+                <div class="form-group flex-1">
+                  <label for="log-sleep" class="form-label">Sleep Duration (hrs)</label>
+                  <input type="number" id="log-sleep" min="0" max="24" step="any" class="input-number" placeholder="e.g. 8.0">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="log-notes" class="form-label">Daily Notes, Energy & Fatigue</label>
+                <textarea id="log-notes" class="input-textarea" rows="2" placeholder="Felt strong in gym, hunger was low, good hydration..."></textarea>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="btn-save-daily-log">
+                  💾 Save Daily Fitness Log
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Right: Streak Rules & Guidance Card -->
+          <div class="card guidance-card">
+            <h3>🔥 Streak Mechanics & Rules</h3>
+            <ul class="guidance-list">
+              <li><strong>Completion Rule:</strong> A calendar day is marked complete when you finish and save your daily fitness log.</li>
+              <li><strong>Rest Days Count:</strong> Taking planned rest days is crucial for muscle recovery. Selecting "Rest Day" and marking the log as complete continues your streak!</li>
+              <li><strong>Consecutive Days:</strong> Consecutive calendar days build your streak count. A missing day breaks the streak.</li>
+              <li><strong>No Duplicates:</strong> Selecting an existing date will edit that date's log rather than creating duplicates.</li>
+              <li><strong>Honest Habit Building:</strong> Streak completion reflects your habit of daily logging, not whether you hit every macro perfectly.</li>
+            </ul>
+
+            <div class="alert-box info mt-4">
+              <strong>💡 Pro-Tip for Fat Loss:</strong>
+              <p>Do not drastically cut calories on rest days. Your muscles repair and synthesize new proteins during rest periods, which requires energy and amino acids.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- History Table of Daily Logs -->
+        <div class="card mt-4">
+          <h3 class="card-title">Daily Log History</h3>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Weight</th>
+                  <th>Calories</th>
+                  <th>Protein</th>
+                  <th>Workout</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="table-daily-logs-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 3. WORKOUT TRACKING VIEW ================= -->
+      <section id="view-workouts" class="view-section" hidden>
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Workout Tracker & Performance Logger</h1>
+            <p class="view-subtitle">Track exercises, sets, weights, reps, and RPE with automated Epley 1RM estimation and PR tracking.</p>
+          </div>
+        </div>
+
+        <!-- Workout Logging Form -->
+        <div class="card mb-4">
+          <form id="form-workout">
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="workout-date" class="form-label">Workout Date</label>
+                <input type="date" id="workout-date" class="input-text" required>
+              </div>
+              <div class="form-group flex-2">
+                <label for="workout-name" class="form-label">Workout Session Name</label>
+                <input type="text" id="workout-name" class="input-text" placeholder="e.g. Push Day A - Heavy Bench & Shoulders" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="workout-notes" class="form-label">Session Notes (Optional)</label>
+              <input type="text" id="workout-notes" class="input-text" placeholder="Felt energetic, pre-workout meal 2 hours prior...">
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="workout-exercises-header">
+              <h3>Exercises & Sets</h3>
+              <button type="button" class="btn btn-outline" id="btn-add-exercise-to-workout">
+                + Add Exercise
+              </button>
+            </div>
+
+            <!-- Dynamic Exercise List -->
+            <div id="workout-exercise-list" class="exercise-cards-list">
+              <!-- Dynamically populated -->
+            </div>
+
+            <div class="form-actions mt-4">
+              <button type="submit" class="btn btn-primary" id="btn-save-workout">
+                🏋️ Save Workout & Update PRs
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Workout History -->
+        <div class="card">
+          <h3 class="card-title">Completed Workout History</h3>
+          <div id="workouts-history-container">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 4. NUTRITION VIEW ================= -->
+      <section id="view-nutrition" class="view-section" hidden>
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Manual Nutrition Tracker</h1>
+            <p class="view-subtitle">Accurate manual food logging without paid APIs. Reusable presets for your daily high-protein staples.</p>
+          </div>
+          <div class="header-action-group">
+            <input type="date" id="nutrition-date" class="input-text inline-date">
+          </div>
+        </div>
+
+        <!-- Target vs Logged Summary Card -->
+        <div class="card mb-4" id="nutrition-summary-card">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Smart Meal AI / Chat Assistant Quick Logger -->
+        <div class="card mb-4 smart-meal-card" id="card-smart-meal-chat">
+          <div class="smart-meal-header">
+            <div class="smart-meal-title-group">
+              <span class="smart-meal-badge"><img src="assets/gifs/fire.gif" alt="🔥" class="badge-tier-gif" /> AI Natural Language Food Logger</span>
+              <h3 class="card-title mt-1">Smart Meal Quick Logger</h3>
+              <p class="card-subtitle">
+                Type or paste your meal in natural language (e.g. <em>"lunch: rice 100g, chicken 200 gm, 2 boiled egg white, gravy"</em>). FitTrack automatically detects each food item, calculates calories, protein, carbs, and fat, and updates your logs instantly without internet searching!
+              </p>
+            </div>
+            <div class="smart-meal-header-actions">
+              <button type="button" class="btn-sm btn-outline" id="btn-toggle-meal-help" title="View supported food items">
+                💡 View Food Guide
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Food Guide (Collapsible) -->
+          <div class="smart-meal-guide" id="smart-meal-guide" style="display: none;">
+            <div class="guide-grid">
+              <div class="guide-col">
+                <strong>🍗 High Protein</strong>
+                <span>Chicken breast, chicken thigh, boiled egg whites, whole eggs, paneer, whey protein, fish/tilapia, salmon, tofu, soya chunks, prawns, beef</span>
+              </div>
+              <div class="guide-col">
+                <strong>🍚 Carbs & Staples</strong>
+                <span>Cooked rice (white/brown/basmati), roti/chapati, paratha, oats, potato, sweet potato, bread/toast, pasta, idli, dosa, biryani</span>
+              </div>
+              <div class="guide-col">
+                <strong>🍲 Curries, Dairies & Fats</strong>
+                <span>Curry gravy, dal, sambar, chana, rajma, milk, curd/yogurt, peanut butter, almonds, ghee, olive oil, bananas, apples</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Results & Confirmation Box (Appears when meal is logged) -->
+          <div class="smart-meal-chat-box" id="smart-meal-chat-box" style="display: none;">
+            <!-- Rendered dynamically on meal log -->
+          </div>
+
+          <!-- Input Area -->
+          <form id="form-smart-meal" class="smart-meal-form">
+            <div class="smart-meal-input-row">
+              <textarea
+                id="smart-meal-input"
+                class="smart-meal-textarea"
+                rows="3"
+                placeholder="Type or paste your meal here...&#10;e.g.&#10;lunch&#10;rice - 100g&#10;chicken 200 gm&#10;2 boiled egg white&#10;gravy"
+                required
+              ></textarea>
+            </div>
+
+            <div class="smart-meal-controls-row">
+              <div class="smart-meal-options">
+                <label for="smart-meal-category-select" class="text-sm text-muted">Category:</label>
+                <select id="smart-meal-category-select" class="input-select input-select-sm">
+                  <option value="auto">✨ Auto-Detect from Text</option>
+                  <option value="breakfast">🍳 Breakfast</option>
+                  <option value="lunch">🍛 Lunch</option>
+                  <option value="dinner">🍲 Dinner</option>
+                  <option value="snack">🍎 Snack</option>
+                </select>
+              </div>
+
+              <div class="smart-meal-buttons">
+                <button type="button" class="btn btn-outline btn-sm" id="btn-smart-meal-fill-form" title="Calculate and populate manual form below without saving immediately">
+                  📋 Populate Form Below
+                </button>
+                <button type="submit" class="btn btn-primary" id="btn-smart-meal-submit">
+                  ⚡ Auto-Log Meal to Diary
+                </button>
+              </div>
+            </div>
+
+            <!-- Quick Example Chips -->
+            <div class="smart-meal-chips">
+              <span class="chip-label">Quick test:</span>
+              <button type="button" class="meal-chip" data-example="lunch&#10;rice - 100g&#10;chicken 200 gm&#10;2 boiled egg white&#10;gravy">
+                🍛 User's Lunch Example
+              </button>
+              <button type="button" class="meal-chip" data-example="breakfast&#10;3 whole eggs&#10;2 slices bread&#10;1 banana">
+                🍳 3 Eggs & Toast
+              </button>
+              <button type="button" class="meal-chip" data-example="snack&#10;1 scoop whey protein&#10;250ml milk&#10;1 tbsp peanut butter">
+                🥛 Whey Protein Shake
+              </button>
+              <button type="button" class="meal-chip" data-example="dinner&#10;150g paneer&#10;2 chapati&#10;1 cup dal">
+                🥘 Paneer & Chapati
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Manual Food Entry Form -->
+        <div class="card mb-4">
+          <h3 class="card-title">Log a Food Item</h3>
+          <form id="form-add-food">
+            <div class="form-row">
+              <div class="form-group flex-2">
+                <label for="food-name" class="form-label">Food Name *</label>
+                <input type="text" id="food-name" class="input-text" placeholder="e.g. Grilled Chicken Breast" required>
+              </div>
+              <div class="form-group flex-1">
+                <label for="food-serving" class="form-label">Serving / Quantity</label>
+                <input type="text" id="food-serving" class="input-text" placeholder="e.g. 200g">
+              </div>
+              <div class="form-group flex-1">
+                <label for="food-category" class="form-label">Meal Category</label>
+                <select id="food-category" class="input-select">
+                  <option value="breakfast">Breakfast</option>
+                  <option value="lunch">Lunch</option>
+                  <option value="dinner">Dinner</option>
+                  <option value="snack">Snack</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="food-calories" class="form-label">Calories (kcal) *</label>
+                <input type="number" id="food-calories" min="0" step="any" class="input-number" placeholder="e.g. 330" required>
+              </div>
+              <div class="form-group flex-1">
+                <label for="food-protein" class="form-label">Protein (g) *</label>
+                <input type="number" id="food-protein" min="0" step="any" class="input-number" placeholder="e.g. 62" required>
+              </div>
+              <div class="form-group flex-1">
+                <label for="food-carbs" class="form-label">Carbs (g)</label>
+                <input type="number" id="food-carbs" min="0" step="any" class="input-number" placeholder="e.g. 0">
+              </div>
+              <div class="form-group flex-1">
+                <label for="food-fat" class="form-label">Fat (g)</label>
+                <input type="number" id="food-fat" min="0" step="any" class="input-number" placeholder="e.g. 7">
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">🥗 Add Food to Log</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Logged Foods Table -->
+        <div class="card">
+          <h3 class="card-title">Logged Foods for Selected Date</h3>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Food & Serving</th>
+                  <th>Category</th>
+                  <th>Calories</th>
+                  <th>Protein</th>
+                  <th>Carbs</th>
+                  <th>Fat</th>
+                  <th style="text-align: right; min-width: 110px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="table-nutrition-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+          <div class="nutrition-disclaimer mt-3">
+            <small class="text-muted">ℹ️ Notice: Nutrition values are user-entered self-reported estimates. FitTrack clearly distinguishes manual entries from laboratory certified nutritional data.</small>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 5. PROGRESS HISTORY VIEW ================= -->
+      <section id="view-progress" class="view-section" hidden>
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Progress & Body Recomposition Analysis</h1>
+            <p class="view-subtitle">Scientific evaluation of weight change, waist circumference reduction, and primary lift progression.</p>
+          </div>
+        </div>
+
+        <div id="progress-analysis-container">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <div class="card mt-4">
+          <h3 class="card-title">Complete Historical Weight Trend</h3>
+          <div class="chart-canvas-container">
+            <canvas id="chart-progress-full-weight"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 6. GOALS & REVIEW VIEW ================= -->
+      <section id="view-goals" class="view-section" hidden>
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Personalized Goals & Weekly Review</h1>
+            <p class="view-subtitle">Evidence-based calorie deficit, optimal protein intake, and honest weekly progress review.</p>
+          </div>
+        </div>
+
+        <div class="goals-layout">
+          <!-- Left: Goals Configuration -->
+          <div class="card">
+            <div class="section-heading-row">
+              <h3>Nutrition & Activity Targets</h3>
+              <button type="button" class="btn-sm btn-outline" id="btn-calc-suggested-targets">
+                ⚡ Calculate Suggested (Mifflin-St Jeor)
+              </button>
+            </div>
+
+            <div id="suggested-targets-explainer"></div>
+
+            <form id="form-goals" class="mt-3">
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label for="goal-calories" class="form-label">Daily Calories (kcal)</label>
+                  <input type="number" id="goal-calories" min="1200" max="6000" step="any" class="input-number" required>
+                </div>
+                <div class="form-group flex-1">
+                  <label for="goal-protein" class="form-label">Daily Protein (g)</label>
+                  <input type="number" id="goal-protein" min="50" max="400" step="any" class="input-number" required>
+                  <small class="text-muted">Target: ~1.6 - 2.2 g/kg body weight</small>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label for="goal-carbs" class="form-label">Daily Carbohydrates (g)</label>
+                  <input type="number" id="goal-carbs" min="0" max="800" step="any" class="input-number">
+                </div>
+                <div class="form-group flex-1">
+                  <label for="goal-fat" class="form-label">Daily Fat (g)</label>
+                  <input type="number" id="goal-fat" min="10" max="300" step="any" class="input-number">
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label for="goal-workouts" class="form-label">Weekly Workouts Target</label>
+                  <input type="number" id="goal-workouts" min="1" max="7" class="input-number" value="6" required>
+                </div>
+                <div class="form-group flex-1">
+                  <label for="goal-water" class="form-label">Daily Water Target (ml)</label>
+                  <input type="number" id="goal-water" min="500" max="10000" step="any" class="input-number" value="3000">
+                </div>
+                <div class="form-group flex-1">
+                  <label for="goal-sleep" class="form-label">Daily Sleep Target (hrs)</label>
+                  <input type="number" id="goal-sleep" min="4" max="14" step="any" class="input-number" value="8">
+                </div>
+              </div>
+
+              <div class="alert-box neutral mt-3">
+                <small>⚠️ <strong>Important Medical Disclaimer:</strong> Calorie and macronutrient estimates are starting points derived from exercise physiology equations (Mifflin-St Jeor) and are not medical advice. Re-evaluate every 3–4 weeks based on your rate of fat loss, gym energy, and recovery.</small>
+              </div>
+
+              <div class="form-actions mt-3">
+                <button type="submit" class="btn btn-primary">💾 Save Targets</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Right: Weekly Review Card -->
+          <div class="card" id="weekly-review-card">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 7. SETTINGS & BACKUP VIEW ================= -->
+      <section id="view-settings" class="view-section" hidden>
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Settings, Profile & Data Architecture</h1>
+            <p class="view-subtitle">Manage your personal physiological profile, export JSON/CSV backups, or view the future cloud roadmap.</p>
+          </div>
+        </div>
+
+        <!-- User Profile Form -->
+        <div class="card mb-4">
+          <h3 class="card-title">Physiological Profile</h3>
+          <p class="card-subtitle">Editable profile details used for BMR, TDEE, and protein multiplier calculations.</p>
+          <form id="form-profile">
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="prof-age" class="form-label">Age</label>
+                <input type="number" id="prof-age" min="15" max="100" class="input-number" placeholder="e.g. 25" required>
+              </div>
+              <div class="form-group flex-1">
+                <label for="prof-sex" class="form-label">Biological Sex</label>
+                <select id="prof-sex" class="input-select">
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+              <div class="form-group flex-1">
+                <label for="prof-height" class="form-label">Height (cm)</label>
+                <input type="number" id="prof-height" min="100" max="250" class="input-number" placeholder="e.g. 175" required>
+              </div>
+              <div class="form-group flex-1">
+                <label for="prof-weight" class="form-label">Current Weight (kg) *</label>
+                <input type="number" id="prof-weight" step="any" min="30" max="300" class="input-number" placeholder="e.g. 70" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <div class="label-with-action">
+                  <label for="prof-bf-select" class="form-label">Current Body Fat % (with Examples)</label>
+                  <button type="button" class="btn-link-action btn-open-bf-modal" id="btn-view-bf-chart-settings">📷 View Torso Comparison Chart</button>
+                </div>
+                <select id="prof-bf-select" class="input-select">
+                  <option value="10">10% — Beach Lean (Clear six-pack, defined abs, vascular)</option>
+                  <option value="14">14% — Athletic & Fit (Upper abs visible, lean outline)</option>
+                  <option value="18">18% — Healthy / Normal (Flat stomach, faint ab outline)</option>
+                  <option value="22" selected>22% — Moderate / Soft (Soft midsection, no visible abs)</option>
+                  <option value="26">26% — Overweight (Noticeable belly fat, rounded waist)</option>
+                  <option value="30">30% — Heavy (Prominent belly fat and love handles)</option>
+                  <option value="35">35%+ — Very High (Excess abdominal fat)</option>
+                  <option value="custom">✏️ Enter Custom %...</option>
+                </select>
+                <input type="number" id="prof-bf" step="any" min="3" max="60" class="input-number mt-1" placeholder="Custom BF %" style="display: none;">
+              </div>
+
+              <div class="form-group flex-1">
+                <label for="prof-target-bf-select" class="form-label">Target Achievable Body Fat % (with Examples) *</label>
+                <select id="prof-target-bf-select" class="input-select">
+                  <option value="10" selected>10% — Beach Lean & Six-Pack (Maximum definition, vascular)</option>
+                  <option value="12">12% — Chiseled & Athletic (Clear abs, highly fit)</option>
+                  <option value="14">14% — Athletic & Fit (Upper abs, sustainable year-round)</option>
+                  <option value="16">16% — Lean & Healthy (Flat midsection, active lifestyle)</option>
+                  <option value="18">18% — Healthy Maintenance (Sustainable fitness & vitality)</option>
+                  <option value="custom">✏️ Enter Custom Target %...</option>
+                </select>
+                <input type="number" id="prof-target-bf" step="any" min="3" max="40" class="input-number mt-1" placeholder="Custom Target %" style="display: none;">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="prof-training" class="form-label">Training Frequency (days/week)</label>
+                <input type="number" id="prof-training" min="1" max="7" class="input-number" placeholder="e.g. 4" required>
+              </div>
+              <div class="form-group flex-1">
+                <label for="prof-activity" class="form-label">Activity Multiplier</label>
+                <select id="prof-activity" class="input-select">
+                  <option value="1.2">Sedentary (desk work, little activity)</option>
+                  <option value="1.375" selected>Lightly Active (light exercise 1-3 days)</option>
+                  <option value="1.55">Moderately Active (exercise 3-5 days)</option>
+                  <option value="1.6">Heavy Lifting (6 days/week lifting focus)</option>
+                  <option value="1.725">Very Active (hard exercise 6-7 days/week)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="prof-primary-goal" class="form-label">Primary Fitness Goal</label>
+              <input type="text" id="prof-primary-goal" class="input-text" placeholder="e.g. Lose body fat, build muscle, and tone up" required>
+            </div>
+
+            <div class="form-group">
+              <label for="prof-secondary-goal" class="form-label">Secondary Goal</label>
+              <input type="text" id="prof-secondary-goal" class="input-text" placeholder="e.g. Improve strength and physical fitness">
+            </div>
+
+            <div class="form-group">
+              <label for="prof-constraint" class="form-label">Important Nutritional / Training Constraint</label>
+              <textarea id="prof-constraint" class="input-textarea" rows="2" placeholder="e.g. Sustainable deficit with high protein retention"></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">💾 Save Profile & Recalculate</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Data Persistence, Backup & Export -->
+        <div class="card mb-4">
+          <h3 class="card-title">Data Privacy & Local Storage</h3>
+          <p class="card-subtitle">Your data is stored 100% locally and privately in this browser using Web Storage (LocalStorage). No third-party servers can access it.</p>
+          
+          <div class="backup-actions-grid">
+            <div class="backup-card">
+              <h4>Complete JSON Backup</h4>
+              <p>Export your full database (profile, goals, daily logs, workouts, PRs, presets) as a single portable JSON file.</p>
+              <div class="btn-group-stacked">
+                <button type="button" class="btn btn-outline" id="btn-export-json">📥 Download JSON Backup</button>
+                <label class="btn btn-outline file-input-label">
+                  📤 Import JSON Backup
+                  <input type="file" id="input-import-json" accept=".json" style="display: none;">
+                </label>
+              </div>
+            </div>
+
+            <div class="backup-card">
+              <h4>Historical CSV Exports</h4>
+              <p>Export your training and body composition records into standard spreadsheets (Excel / Google Sheets).</p>
+              <div class="btn-group-stacked">
+                <button type="button" class="btn-sm btn-outline" id="btn-export-csv-logs">📄 Export Daily Logs CSV</button>
+                <button type="button" class="btn-sm btn-outline" id="btn-export-csv-workouts">📄 Export Workouts & Sets CSV</button>
+                <button type="button" class="btn-sm btn-outline" id="btn-export-csv-measurements">📄 Export Measurements CSV</button>
+              </div>
+            </div>
+
+            <div class="backup-card danger-zone">
+              <h4>Danger Zone</h4>
+              <p>Permanently wipe all FitTrack data from this browser. Ensure you have exported a JSON backup first!</p>
+              <button type="button" class="btn btn-danger" id="btn-reset-data">🗑️ Reset All FitTrack Data</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Future Cloud & Commercial Brand Architecture -->
+        <div class="card">
+          <div class="section-heading-row">
+            <div>
+              <h3 class="card-title">Cloud Synchronization & Commercial Architecture (Roadmap)</h3>
+              <span class="status-badge neutral">Status: Static GitHub Pages (Local Storage Active)</span>
+            </div>
+          </div>
+          <div class="cloud-roadmap-content">
+            <p>FitTrack has been engineered with a clean repository pattern (<code>FitTrackStore</code>). The client-side storage engine can seamlessly transition to a secure multi-tenant cloud backend without rewriting UI or business logic.</p>
+            
+            <div class="roadmap-grid">
+              <div class="roadmap-item">
+                <div class="rm-num">1</div>
+                <div>
+                  <strong>Supabase / Firebase Backend</strong>
+                  <p>PostgreSQL schema with Row-Level Security (RLS) guaranteeing user-specific data isolation. Zero client-exposed service role keys.</p>
+                </div>
+              </div>
+              <div class="roadmap-item">
+                <div class="rm-num">2</div>
+                <div>
+                  <strong>Authentication & Multi-Device Sync</strong>
+                  <p>OAuth & Magic Link sign-in with offline-first client cache and conflict resolution across phone and desktop.</p>
+                </div>
+              </div>
+              <div class="roadmap-item">
+                <div class="rm-num">3</div>
+                <div>
+                  <strong>Commercial Platform & Subscriptions</strong>
+                  <p>Stripe Billing integration for premium coaching analytics, video exercise form review, and AI meal audits.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 8. ADMIN & SECURITY PORTAL VIEW ================= -->
+      <section id="view-admin" class="view-section" hidden>
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Admin & Security Portal</h1>
+            <p class="view-subtitle">Zero-knowledge client encryption, master passphrase management, stealth mode, and cloud database configuration.</p>
+          </div>
+          <div class="header-action-group">
+            <button type="button" class="btn btn-danger btn-sm" id="btn-admin-lock-now">
+              🔒 Lock Vault Now
+            </button>
+          </div>
+        </div>
+
+        <div class="admin-grid">
+          <!-- Vault Encryption Status & Passphrase Management -->
+          <div class="card">
+            <div class="section-heading-row">
+              <h3>Master Passphrase & Cryptography</h3>
+              <span class="status-badge success" id="badge-vault-status">● AES-256-GCM Active</span>
+            </div>
+            <p class="card-subtitle">Protect your personal weight, body fat %, notes, and lifting PRs with hardware-accelerated encryption.</p>
+
+            <form id="form-admin-password">
+              <div class="form-group" id="group-current-password" style="display: none;">
+                <label for="admin-current-pass" class="form-label">Current Passphrase</label>
+                <input type="password" id="admin-current-pass" class="input-text" placeholder="Enter current passphrase">
+              </div>
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label for="admin-new-pass" class="form-label" id="label-admin-pass">Set Master Passphrase</label>
+                  <input type="password" id="admin-new-pass" class="input-text" placeholder="Min 6 characters" required>
+                </div>
+                <div class="form-group flex-1">
+                  <label for="admin-confirm-pass" class="form-label">Confirm Passphrase</label>
+                  <input type="password" id="admin-confirm-pass" class="input-text" placeholder="Repeat passphrase" required>
+                </div>
+              </div>
+              <div class="form-actions mt-3">
+                <button type="submit" class="btn btn-primary" id="btn-save-master-pass">
+                  💾 Save Master Passphrase
+                </button>
+                <button type="button" class="btn btn-outline" id="btn-disable-vault" style="display: none;">
+                  Disable Encryption
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Session Security & Auto-Lock -->
+          <div class="card">
+            <h3>Session Inactivity & Camo Mode</h3>
+            <p class="card-subtitle">Automated controls to prevent shoulder surfing and unauthorized physical access.</p>
+            
+            <div class="form-group">
+              <label for="select-auto-lock" class="form-label">Auto-Lock Inactivity Timeout</label>
+              <select id="select-auto-lock" class="input-select">
+                <option value="5">5 Minutes</option>
+                <option value="15" selected>15 Minutes (Recommended)</option>
+                <option value="30">30 Minutes</option>
+                <option value="60">1 Hour</option>
+              </select>
+            </div>
+
+            <div class="form-group mt-3">
+              <label class="checkbox-label">
+                <input type="checkbox" id="check-lock-on-hide" class="custom-checkbox">
+                Lock vault when switching browser tabs or minimizing
+              </label>
+            </div>
+
+            <div class="mt-4 pt-3" style="border-top: 1px solid var(--border-subtle);">
+              <button type="button" class="btn btn-outline w-full" id="btn-admin-toggle-camo">
+                🕶️ Toggle Stealth Mode (Blur Weights & Numbers)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security Audit Breakdown -->
+        <div class="card mt-4">
+          <h3 class="card-title">Security & GitHub Pages Architecture Audit</h3>
+          <div class="security-audit-grid mt-3">
+            <div class="audit-item">
+              <div class="audit-icon text-accent-green">✓</div>
+              <div>
+                <strong>No Data Committed to Git</strong>
+                <p>Your <code>.gitignore</code> strictly excludes all JSON and CSV exports. No personal progress logs ever exist in your Git history or repository code.</p>
+              </div>
+            </div>
+            <div class="audit-item">
+              <div class="audit-icon text-accent-green">✓</div>
+              <div>
+                <strong>Zero-Knowledge Client Storage</strong>
+                <p>Data stored in <code>localStorage</code> is encrypted with an AES-256-GCM key derived from your passphrase using 100,000 PBKDF2 rounds. Even if someone inspects storage in DevTools, they see unreadable binary hex ciphertext.</p>
+              </div>
+            </div>
+            <div class="audit-item">
+              <div class="audit-icon text-accent-green">✓</div>
+              <div>
+                <strong>Zero External Telemetry</strong>
+                <p>No Google Analytics, Meta Pixel, or third-party advertising SDKs are installed. Zero telemetry bytes leave your device.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cloud Upgrade (Supabase Integration) -->
+        <div class="card mt-4">
+          <div class="section-heading-row">
+            <div>
+              <h3 class="card-title">Optional: Multi-Device Cloud Sync (Supabase PostgreSQL)</h3>
+              <p class="card-subtitle">If you want to sync between your phone and laptop without manual JSON exports, connect your own free private Supabase backend.</p>
+            </div>
+            <span class="status-badge neutral">Status: Local Vault Active</span>
+          </div>
+
+          <form id="form-cloud-config">
+            <div class="form-row">
+              <div class="form-group flex-2">
+                <label for="cloud-supabase-url" class="form-label">Supabase Project URL</label>
+                <input type="url" id="cloud-supabase-url" class="input-text" placeholder="https://xyzcompany.supabase.co">
+              </div>
+              <div class="form-group flex-2">
+                <label for="cloud-supabase-anon" class="form-label">Supabase Anon Key</label>
+                <input type="password" id="cloud-supabase-anon" class="input-text" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+              </div>
+            </div>
+            <div class="alert-box info mt-2">
+              <small>ℹ️ <strong>Row-Level Security (RLS) Guarantee:</strong> With Supabase, each user has a dedicated UUID. PostgreSQL policies strictly prevent any user from querying another user's rows. Service-role keys are never placed in client code.</small>
+            </div>
+          </form>
+        </div>
+        <!-- User Account Management & Multi-User Support -->
+        <div class="card mt-4" id="card-admin-users">
+          <div class="section-heading-row">
+            <div>
+              <h3 class="card-title">User Account Administration & Multi-User Access</h3>
+              <p class="card-subtitle">Manage authorization, roles, and user accounts. Public registration is strictly disabled; only administrators can provision new accounts.</p>
+            </div>
+            <span class="status-badge success">● Administrator Access</span>
+          </div>
+
+          <!-- Existing Users Table -->
+          <div class="users-table-container mt-3">
+            <table class="users-table">
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="table-admin-users-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Provision New User Form -->
+          <div class="mt-4 pt-3" style="border-top: 1px solid var(--border-subtle);">
+            <h4>➕ Provision New User Account</h4>
+            <p class="text-sm text-secondary mb-3">Create a new user account with dedicated isolated profiles and fitness records.</p>
+            
+            <form id="form-create-user">
+              <div class="form-row">
+                <div class="form-group flex-2">
+                  <label for="new-user-username" class="form-label">Username</label>
+                  <input type="text" id="new-user-username" class="input-text" placeholder="e.g. coach_mike" required>
+                </div>
+                <div class="form-group flex-2">
+                  <label for="new-user-password" class="form-label">Initial Password</label>
+                  <input type="password" id="new-user-password" class="input-text" placeholder="Min 6 characters" required>
+                </div>
+                <div class="form-group flex-1">
+                  <label for="new-user-role" class="form-label">Role</label>
+                  <select id="new-user-role" class="input-select">
+                    <option value="user" selected>Member (Standard)</option>
+                    <option value="admin">Administrator</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions mt-3">
+                <button type="submit" class="btn btn-primary" id="btn-submit-create-user">
+                  ➕ Create User Account
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Adaptive Goals Configuration -->
+        <div class="card mt-4">
+          <div class="section-heading-row">
+            <div>
+              <h3 class="card-title">Adaptive Nutrition & Target Personalization</h3>
+              <p class="card-subtitle">Control dynamic evidence-based adjustments for calorie deficits and protein targets.</p>
+            </div>
+          </div>
+          <div class="form-group mt-3">
+            <label class="checkbox-label">
+              <input type="checkbox" id="check-auto-goal-adjust" class="custom-checkbox" checked>
+              <strong>Enable Automatic Goal Recommendations based on multi-week weight trends</strong>
+            </label>
+            <p class="text-sm text-muted mt-1 ml-6">
+              When enabled, FitTrack analyzes 7–14 day rolling averages. If a fat-loss plateau is detected, it gently suggests a -100 kcal adjustment; if weight drops too fast, it suggests adding +150 kcal to protect muscle retention.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 9. LOGIN & AUTHENTICATION VIEW ================= -->
+      <section id="view-login" class="view-section" hidden>
+        <div class="login-wrapper">
+          <div class="locked-gate-hero">
+            <div class="locked-gate-badge">🛡️ Zero-Knowledge Client Cryptography Active</div>
+            <h1 class="locked-gate-title">FitTrack <span class="brand-accent">Portal</span></h1>
+            <p class="locked-gate-subtitle">Your private fitness, progressive overload, and nutrition tracking platform.</p>
+          </div>
+
+          <!-- Alert box for login errors / success -->
+          <div id="login-feedback-alert" class="alert-box error mb-3" style="display: none;"></div>
+
+          <!-- A. Standard Login Form (Username & Password) -->
+          <div class="card login-card" id="card-standard-login">
+            <div class="unlock-header">
+              <div class="unlock-icon">🔐</div>
+              <div>
+                <h3 class="unlock-title" id="login-card-title">Sign In to FitTrack</h3>
+                <p class="text-sm text-secondary">Enter your username and password to unlock your personal dashboard.</p>
+              </div>
+            </div>
+
+            <form id="form-user-login" class="mt-3">
+              <div class="form-group">
+                <label for="login-username" class="form-label">Username</label>
+                <input type="text" id="login-username" class="input-text" placeholder="e.g. admin" required autocomplete="username">
+              </div>
+
+              <div class="form-group mt-3">
+                <label for="login-password" class="form-label">Password</label>
+                <div class="password-input-wrap">
+                  <input type="password" id="login-password" class="input-text" placeholder="Enter password" required autocomplete="current-password">
+                  <button type="button" class="btn-icon btn-toggle-pw" id="btn-toggle-login-pw" title="Show/Hide password">👁️</button>
+                </div>
+              </div>
+
+              <div class="form-actions mt-4">
+                <button type="submit" class="btn btn-primary w-full" id="btn-submit-login">
+                  <span id="login-btn-text">🔐 Sign In to Dashboard</span>
+                </button>
+              </div>
+            </form>
+
+            <div class="vault-status-indicator mt-3 text-center">
+              <small class="text-muted">🔒 Hardware-accelerated PBKDF2 (100k rounds) & AES-256-GCM · Offline-first & Git-safe</small>
+            </div>
+          </div>
+
+          <!-- B. First-Time Administrator Setup Card (Shown ONLY when 0 users exist) -->
+          <div class="card login-card" id="card-first-time-setup" style="display: none;">
+            <div class="unlock-header">
+              <div class="unlock-icon">👑</div>
+              <div>
+                <h3 class="unlock-title">Administrator Initial Setup</h3>
+                <p class="text-sm text-secondary">Welcome to FitTrack! Configure your primary administrator credentials to secure your personal records.</p>
+              </div>
+            </div>
+
+            <div class="alert-box info mt-2 mb-3">
+              <small>ℹ️ <strong>Security Guarantee:</strong> Passwords are never hardcoded or sent across network servers. Credentials are salted and hashed locally using 100,000 PBKDF2 iterations. Public registration is permanently disabled after this step.</small>
+            </div>
+
+            <form id="form-admin-setup">
+              <div class="form-group">
+                <label for="setup-admin-username" class="form-label">Administrator Username</label>
+                <input type="text" id="setup-admin-username" class="input-text" value="admin" required autocomplete="username">
+              </div>
+
+              <div class="form-row mt-3">
+                <div class="form-group flex-1">
+                  <label for="setup-admin-password" class="form-label">Master Password</label>
+                  <div class="password-input-wrap">
+                    <input type="password" id="setup-admin-password" class="input-text" placeholder="Min 6 characters" required autocomplete="new-password">
+                    <button type="button" class="btn-icon btn-toggle-pw" id="btn-toggle-setup-pw" title="Show/Hide password">👁️</button>
+                  </div>
+                </div>
+                <div class="form-group flex-1">
+                  <label for="setup-admin-confirm" class="form-label">Confirm Password</label>
+                  <input type="password" id="setup-admin-confirm" class="input-text" placeholder="Repeat password" required autocomplete="new-password">
+                </div>
+              </div>
+
+              <div class="form-actions mt-4">
+                <button type="submit" class="btn btn-primary w-full" id="btn-create-admin">
+                  🚀 Create Administrator Account & Launch FitTrack
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- C. Authenticated Active Session Box (Shown when already logged in and visiting #login) -->
+          <div class="card login-card" id="login-active-session-box" style="display: none;">
+            <div class="alert-box success text-center mb-3">
+              <strong id="active-user-session-text">✓ Active Session: Administrator</strong>
+              <p class="text-sm mt-1">You are currently logged in with active in-memory decryption.</p>
+            </div>
+            <div class="btn-group-stacked">
+              <a href="#dashboard" class="btn btn-primary w-full" data-view="dashboard">Go to Dashboard →</a>
+              <button type="button" class="btn btn-danger w-full btn-do-logout">🚪 Log Out</button>
+            </div>
+          </div>
+
+          <!-- Public Brand Showcase Cards -->
+          <div class="public-showcase-grid mt-4">
+            <div class="showcase-card">
+              <div class="showcase-icon">🏋️</div>
+              <h4>Workouts & Progressive Overload</h4>
+              <p>Track exercises, sets, weights, and reps with automated Epley 1RM estimation.</p>
+            </div>
+            <div class="showcase-card">
+              <div class="showcase-icon">🥩</div>
+              <h4>High-Protein Nutrition</h4>
+              <p>Evidence-informed protein targets (1.6–2.2 g/kg) with reusable high-protein meal presets.</p>
+            </div>
+            <div class="showcase-card">
+              <div class="showcase-icon">📈</div>
+              <h4>Adaptive Goal Engine</h4>
+              <p>Automatically adjusts daily calories and protein based on rolling multi-week weight trends.</p>
+            </div>
+            <div class="showcase-card">
+              <div class="showcase-icon">🛡️</div>
+              <h4>Private & Self-Sovereign</h4>
+              <p>100% offline-first storage. No tracking scripts, no ads, and zero public data leakage on Git.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Alias section for locked-gate backward compatibility -->
+      <section id="view-locked-gate" class="view-section" hidden></section>
+
+    </main>
+  </div>
+
+  <!-- Bottom Mobile Navigation Bar -->
+  <nav class="mobile-bottom-bar" id="mobile-bottom-bar">
+    <a href="#dashboard" class="bottom-bar-link active" data-view="dashboard">
+      <span class="bottom-icon">📊</span>
+      <span class="bottom-label">Dashboard</span>
+    </a>
+    <a href="#daily-log" class="bottom-bar-link" data-view="daily-log">
+      <span class="bottom-icon">📝</span>
+      <span class="bottom-label">Log</span>
+    </a>
+    <a href="#workouts" class="bottom-bar-link" data-view="workouts">
+      <span class="bottom-icon">🏋️</span>
+      <span class="bottom-label">Workout</span>
+    </a>
+    <a href="#nutrition" class="bottom-bar-link" data-view="nutrition">
+      <span class="bottom-icon">🥗</span>
+      <span class="bottom-label">Nutrition</span>
+    </a>
+    <a href="#settings" class="bottom-bar-link" data-view="settings">
+      <span class="bottom-icon">⚙️</span>
+      <span class="bottom-label">Settings</span>
+    </a>
+  </nav>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- Preset Food Modal -->
+  <div class="modal-overlay" id="modal-preset">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Create Reusable Food Preset</h3>
+        <button type="button" class="btn-icon modal-close">✕</button>
+      </div>
+      <form id="form-preset-modal">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="preset-name" class="form-label">Food Name *</label>
+            <input type="text" id="preset-name" class="input-text" placeholder="e.g. Greek Yogurt 0% with Berries" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="preset-serving" class="form-label">Serving Size</label>
+              <input type="text" id="preset-serving" class="input-text" placeholder="e.g. 200g">
+            </div>
+            <div class="form-group flex-1">
+              <label for="preset-category" class="form-label">Meal Category</label>
+              <select id="preset-category" class="input-select">
+                <option value="breakfast">Breakfast</option>
+                <option value="lunch">Lunch</option>
+                <option value="dinner">Dinner</option>
+                <option value="snack" selected>Snack</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="preset-calories" class="form-label">Calories (kcal) *</label>
+              <input type="number" id="preset-calories" min="0" step="any" class="input-number" required>
+            </div>
+            <div class="form-group flex-1">
+              <label for="preset-protein" class="form-label">Protein (g) *</label>
+              <input type="number" id="preset-protein" min="0" step="any" class="input-number" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="preset-carbs" class="form-label">Carbs (g)</label>
+              <input type="number" id="preset-carbs" min="0" step="any" class="input-number">
+            </div>
+            <div class="form-group flex-1">
+              <label for="preset-fat" class="form-label">Fat (g)</label>
+              <input type="number" id="preset-fat" min="0" step="any" class="input-number">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline modal-close">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Preset</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Logged Food Modal -->
+  <div class="modal-overlay" id="modal-edit-food">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Edit Food Entry & Macros</h3>
+        <button type="button" class="btn-icon modal-close">✕</button>
+      </div>
+      <form id="form-edit-food-modal">
+        <input type="hidden" id="edit-food-id">
+        <input type="hidden" id="edit-food-date">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="edit-food-name" class="form-label">Food Name *</label>
+            <input type="text" id="edit-food-name" class="input-text" placeholder="e.g. Chicken Breast" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="edit-food-serving" class="form-label">Serving / Quantity</label>
+              <input type="text" id="edit-food-serving" class="input-text" placeholder="e.g. 200g, 2 pcs">
+            </div>
+            <div class="form-group flex-1">
+              <label for="edit-food-category" class="form-label">Meal Category</label>
+              <select id="edit-food-category" class="input-select">
+                <option value="breakfast">Breakfast</option>
+                <option value="lunch">Lunch</option>
+                <option value="dinner">Dinner</option>
+                <option value="snack">Snack</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="edit-food-calories" class="form-label">Calories (kcal) *</label>
+              <input type="number" id="edit-food-calories" min="0" step="any" class="input-number" required>
+            </div>
+            <div class="form-group flex-1">
+              <label for="edit-food-protein" class="form-label">Protein (g) *</label>
+              <input type="number" id="edit-food-protein" min="0" step="any" class="input-number" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="edit-food-carbs" class="form-label">Carbs (g)</label>
+              <input type="number" id="edit-food-carbs" min="0" step="any" class="input-number">
+            </div>
+            <div class="form-group flex-1">
+              <label for="edit-food-fat" class="form-label">Fat (g)</label>
+              <input type="number" id="edit-food-fat" min="0" step="any" class="input-number">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline modal-close">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-edit-food">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div class="modal-overlay" id="modal-confirm">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Please Confirm</h3>
+        <button type="button" class="btn-icon modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p id="modal-confirm-message">Are you sure you want to proceed?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline modal-close">Cancel</button>
+        <button type="button" class="btn btn-danger" id="btn-modal-confirm-ok">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Member Onboarding & Target Personalization Modal -->
+  <div class="modal-overlay" id="modal-onboarding">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog modal-dialog-lg">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-subtle); padding: 1.25rem 1.5rem;">
+        <div>
+          <h3 class="modal-title" style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.35rem; color: var(--color-text-main);">
+            <span>🚀</span> Welcome to Your Fitness Journey!
+          </h3>
+          <p class="modal-subtitle" style="margin: 0.35rem 0 0; font-size: 0.88rem; color: var(--color-text-muted);">
+            Please provide your details below. Our Adaptive Nutrition Engine will instantly calculate your evidence-based BMR, TDEE, and daily calorie/protein targets.
+          </p>
+        </div>
+      </div>
+      <form id="form-onboarding">
+        <div class="modal-body" style="padding: 1.25rem 1.5rem; max-height: 70vh; overflow-y: auto;">
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="onboard-name" class="form-label">Your Name / Nickname *</label>
+              <input type="text" id="onboard-name" class="input-text" placeholder="e.g. Alex" required>
+            </div>
+            <div class="form-group flex-1">
+              <label for="onboard-sex" class="form-label">Biological Sex *</label>
+              <select id="onboard-sex" class="input-select" required>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="onboard-age" class="form-label">Age (years) *</label>
+              <input type="number" id="onboard-age" min="14" max="100" class="input-number" placeholder="e.g. 25" required>
+            </div>
+            <div class="form-group flex-1">
+              <label for="onboard-height" class="form-label">Height (cm) *</label>
+              <input type="number" id="onboard-height" min="100" max="250" class="input-number" placeholder="e.g. 175" required>
+            </div>
+            <div class="form-group flex-1">
+              <label for="onboard-weight" class="form-label">Current Body Weight (kg) *</label>
+              <input type="number" id="onboard-weight" min="30" max="300" step="any" class="input-number" placeholder="e.g. 75" required>
+            </div>
+          </div>
+
+          <!-- Body Fat & Achievable Target Percentage Selection with Visual Examples -->
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <div class="label-with-action">
+                <label for="onboard-bf-select" class="form-label">Current Body Fat % (with Examples) *</label>
+                <button type="button" class="btn-link-action btn-open-bf-modal" id="btn-view-bf-chart">📷 View Visual Chart</button>
+              </div>
+              <select id="onboard-bf-select" class="input-select">
+                <option value="10">10% — Beach Lean (Clear six-pack, defined abs, vascular)</option>
+                <option value="14">14% — Athletic & Fit (Upper abs visible, lean outline)</option>
+                <option value="18">18% — Healthy / Normal (Flat stomach, faint ab outline)</option>
+                <option value="22" selected>22% — Moderate / Soft (Soft midsection, no visible abs)</option>
+                <option value="26">26% — Overweight (Noticeable belly fat, rounded waist)</option>
+                <option value="30">30% — Heavy (Prominent belly fat and love handles)</option>
+                <option value="35">35%+ — Very High (Excess abdominal fat)</option>
+                <option value="custom">✏️ Enter Custom %...</option>
+              </select>
+              <input type="number" id="onboard-bf" min="3" max="60" step="any" class="input-number mt-1" placeholder="e.g. 22" style="display: none;">
+            </div>
+
+            <div class="form-group flex-1">
+              <label for="onboard-target-bf-select" class="form-label">Target Achievable Body Fat % (with Examples) *</label>
+              <select id="onboard-target-bf-select" class="input-select">
+                <option value="10" selected>10% — Beach Lean & Six-Pack (Maximum definition, vascular)</option>
+                <option value="12">12% — Chiseled & Athletic (Clear abs, highly fit)</option>
+                <option value="14">14% — Athletic & Fit (Upper abs, sustainable year-round)</option>
+                <option value="16">16% — Lean & Healthy (Flat midsection, active lifestyle)</option>
+                <option value="18">18% — Healthy Maintenance (Sustainable fitness & vitality)</option>
+                <option value="custom">✏️ Enter Custom Target %...</option>
+              </select>
+              <input type="number" id="onboard-target-bf" min="3" max="40" step="any" class="input-number mt-1" placeholder="e.g. 10" style="display: none;">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="onboard-goal" class="form-label">Primary Fitness Goal *</label>
+              <select id="onboard-goal" class="input-select" required>
+                <option value="fat_loss" selected>🔥 Fat Loss & Cutting (Deficit with 2.0g/kg protein retention)</option>
+                <option value="muscle_gain">💪 Muscle Growth & Hypertrophy (Slight surplus with 1.8g/kg protein)</option>
+                <option value="maintenance">⚖️ Maintenance & Recomposition (Maintain weight, build fitness)</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="onboard-activity" class="form-label">Daily Activity Level *</label>
+              <select id="onboard-activity" class="input-select" required>
+                <option value="1.2">Sedentary (desk job, minimal exercise)</option>
+                <option value="1.375" selected>Lightly Active (1–3 training sessions / wk)</option>
+                <option value="1.55">Moderately Active (3–5 training sessions / wk)</option>
+                <option value="1.725">Very Active (6–7 heavy training sessions / wk)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Real-Time Auto-Calculation Preview Card -->
+          <div class="onboarding-preview-card" id="onboard-preview-card">
+            <div class="onboard-preview-title">🎯 Your Personalized Roadmap & Targets (Calculated in Real-Time):</div>
+            <div class="onboard-preview-grid">
+              <div class="onboard-metric">
+                <span class="onboard-metric-label">Target Weight</span>
+                <span class="onboard-metric-value text-accent-cyan" id="onboard-preview-target-weight">-- kg</span>
+              </div>
+              <div class="onboard-metric">
+                <span class="onboard-metric-label">Fat to Shed</span>
+                <span class="onboard-metric-value text-accent-orange" id="onboard-preview-fat-loss">-- kg</span>
+              </div>
+              <div class="onboard-metric">
+                <span class="onboard-metric-label">Est. Timeline</span>
+                <span class="onboard-metric-value text-accent-purple" id="onboard-preview-timeline">-- wks</span>
+              </div>
+              <div class="onboard-metric highlight-cal">
+                <span class="onboard-metric-label">Daily Calories</span>
+                <span class="onboard-metric-value text-accent-orange" id="onboard-preview-cal">-- kcal</span>
+              </div>
+              <div class="onboard-metric highlight-pro">
+                <span class="onboard-metric-label">Daily Protein</span>
+                <span class="onboard-metric-value text-accent-green" id="onboard-preview-pro">-- g</span>
+              </div>
+              <div class="onboard-metric">
+                <span class="onboard-metric-label">Hydration Target</span>
+                <span class="onboard-metric-value text-accent-cyan" id="onboard-preview-water">-- ml</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end;">
+          <button type="submit" class="btn btn-primary" id="btn-submit-onboarding" style="padding: 0.75rem 1.75rem; font-size: 1rem; font-weight: 600; cursor: pointer;">
+            🚀 Start My Fitness Journey
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Body Fat & Torso Comparison Chart -->
+  <div class="modal-overlay" id="modal-bf-chart">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog modal-dialog-lg" style="max-height: 92vh; display: flex; flex-direction: column;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-subtle); padding: 1.1rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 class="modal-title" style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem; color: var(--color-text-main);">
+            <span>📸</span> Body Fat & Torso Comparison Chart
+          </h3>
+          <p class="modal-subtitle" style="margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--color-text-muted);">
+            Compare physiques visually across tiers to set realistic, achievable body recomposition targets.
+          </p>
+        </div>
+        <button type="button" class="modal-close" id="btn-close-bf-chart" aria-label="Close modal">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1rem 1.5rem; overflow-y: auto;">
+        <!-- High-Res Torso Comparison Chart Container -->
+        <div class="bf-3d-card-wrapper" id="bf-3d-wrapper" style="text-align: center; margin-bottom: 1rem; border-radius: 12px; overflow: hidden; background: #070b14; border: 1px solid rgba(34, 197, 94, 0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative;">
+          <img src="assets/bodyfat_chart.png" alt="Male Torso Body Fat Comparison Chart" style="max-width: 100%; max-height: 420px; height: auto; display: block; margin: 0 auto; border-radius: 8px;">
+        </div>
+
+        <!-- Selected Tier Description & Quick Action Box -->
+        <div class="card p-3 mb-3" id="bf-selected-tier-box" style="background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-weight: 700; color: var(--accent-lime); font-size: 1rem;" id="bf-tier-title">10% — Beach Lean</span>
+            <span class="badge badge-success" id="bf-tier-badge" style="background: rgba(34, 197, 94, 0.2); color: var(--accent-lime); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">Six-Pack Abs Target</span>
+          </div>
+          <p class="text-sm text-secondary mb-2" id="bf-tier-desc">Clearly defined six-pack abs, vascularity across arms and lower abdomen, separated deltoids and chest. The classic fitness cover model physique.</p>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-sm btn-primary" id="btn-apply-as-target" style="flex: 1;">
+              🎯 Set as My Target Goal (10%)
+            </button>
+            <button type="button" class="btn btn-sm btn-outline" id="btn-apply-as-current" style="flex: 1;">
+              📍 Set as Current Body Fat (10%)
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Tier Click Buttons -->
+        <div class="bf-tier-quick-list" style="display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center;">
+          <button type="button" class="btn btn-sm btn-outline btn-select-bf-tier active" data-tier="10">10% Beach Lean</button>
+          <button type="button" class="btn btn-sm btn-outline btn-select-bf-tier" data-tier="14">14% Athletic</button>
+          <button type="button" class="btn btn-sm btn-outline btn-select-bf-tier" data-tier="18">18% Healthy</button>
+          <button type="button" class="btn btn-sm btn-outline btn-select-bf-tier" data-tier="22">22% Moderate</button>
+          <button type="button" class="btn btn-sm btn-outline btn-select-bf-tier" data-tier="26">26% Overweight</button>
+          <button type="button" class="btn btn-sm btn-outline btn-select-bf-tier" data-tier="30">30% Heavy</button>
+          <button type="button" class="btn btn-sm btn-outline btn-select-bf-tier" data-tier="35">35%+ High</button>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 0.85rem 1.5rem; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary" id="btn-done-bf-chart">Close Reference Chart</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Adaptive Nutrition Engine & Target Calibrator -->
+  <div class="modal-overlay" id="modal-adaptive-engine">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog modal-dialog-md" style="max-height: 90vh; display: flex; flex-direction: column;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-subtle); padding: 1.1rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 class="modal-title" style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem; color: var(--color-text-main);">
+            <span>🤖</span> Adaptive Nutrition Engine
+          </h3>
+          <p class="modal-subtitle" style="margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--color-text-muted);">
+            Evidence-based dynamic calorie and macronutrient optimization based on weight trends and body recomposition.
+          </p>
+        </div>
+        <button type="button" class="modal-close" id="btn-close-adaptive-modal" aria-label="Close modal">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.25rem 1.5rem; overflow-y: auto;">
+        <!-- Physiology & Metabolic Overview -->
+        <div class="card p-3 mb-3" style="background: rgba(34, 197, 94, 0.05); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 8px;">
+          <h4 style="font-size: 0.95rem; margin-bottom: 0.75rem; color: var(--color-text-main); display: flex; align-items: center; gap: 0.5rem;">
+            <span>🧬</span> Physiological Profile & Metabolism
+          </h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem;">
+            <div>
+              <span class="text-xs text-muted" style="display: block;">Current Weight</span>
+              <strong style="color: var(--accent-blue);" id="modal-adaptive-weight">75.8 kg</strong>
+            </div>
+            <div>
+              <span class="text-xs text-muted" style="display: block;">Basal Metabolic (BMR)</span>
+              <strong style="color: var(--color-text-main);" id="modal-adaptive-bmr">1700 kcal</strong>
+            </div>
+            <div>
+              <span class="text-xs text-muted" style="display: block;">Active TDEE</span>
+              <strong style="color: var(--accent-orange);" id="modal-adaptive-tdee">2719 kcal</strong>
+            </div>
+            <div>
+              <span class="text-xs text-muted" style="display: block;">Primary Goal</span>
+              <strong style="color: var(--accent-lime);" id="modal-adaptive-goal">Fat Loss</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Adaptive Recommendations Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+          <div class="card p-3 text-center" style="background: var(--color-surface); border: 1px solid var(--border-subtle); border-radius: 8px;">
+            <span class="text-xs text-muted" style="display: block; margin-bottom: 0.25rem;">Recommended Calories</span>
+            <span style="font-size: 1.5rem; font-weight: 700; color: var(--accent-orange);" id="adaptive-rec-calories">2222 kcal</span>
+            <div id="adaptive-delta-calories" class="delta-pill positive" style="margin-top: 0.25rem;">Optimal Deficit</div>
+            <small class="text-muted text-xs mt-1" style="display: block;" id="adaptive-cur-calories">Current target: 2310 kcal</small>
+          </div>
+          <div class="card p-3 text-center" style="background: var(--color-surface); border: 1px solid var(--border-subtle); border-radius: 8px;">
+            <span class="text-xs text-muted" style="display: block; margin-bottom: 0.25rem;">Recommended Protein</span>
+            <span style="font-size: 1.5rem; font-weight: 700; color: var(--accent-lime);" id="adaptive-rec-protein">152g</span>
+            <div id="adaptive-delta-protein" class="delta-pill positive" style="margin-top: 0.25rem;">2.0 g/kg</div>
+            <small class="text-muted text-xs mt-1" style="display: block;" id="adaptive-cur-protein">Current target: 152g</small>
+          </div>
+        </div>
+
+        <!-- Trend Analysis & Coaching Guidance -->
+        <div class="card p-3 mb-3" style="background: var(--color-surface); border: 1px solid var(--border-subtle); border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-weight: 600; font-size: 0.88rem; color: var(--color-text-main);">Rolling Trend Analysis</span>
+            <span class="badge badge-neutral" id="adaptive-trend-rate">Baseline Active</span>
+          </div>
+          <p class="text-sm text-secondary" id="adaptive-reason-text" style="margin: 0; line-height: 1.5;">
+            Calculated from Mifflin-St Jeor TDEE with a moderate 18% fat-loss deficit to preserve lean mass.
+          </p>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 0.85rem 1.5rem; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+        <button type="button" class="btn btn-secondary" id="btn-done-adaptive-modal">Close</button>
+        <button type="button" class="btn btn-primary" id="btn-apply-adaptive-targets">
+          ⚡ Apply Recommended Targets Now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+  <!-- Application Logic -->
+  <script src="app.js?v=2.6.0"></script>
+</body>
+</html>
